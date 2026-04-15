@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>KG 详情</title>
+    <style>
+        body {font-family: Arial, sans-serif; margin: 2rem;}
+        .field {margin-bottom: 0.5rem;}
+        .label {font-weight: bold;}
+        .actions button {margin-right: 5px;}
+        table {border-collapse: collapse; width: 100%;}
+        th, td {border: 1px solid #ddd; padding: 8px;}
+        /* Tab styles */
+        .tab {overflow: hidden; border-bottom: 1px solid #ccc; margin-top:1rem;}
+        .tab button {background: none; border: none; outline: none; padding: 10px 20px; cursor: pointer;}
+        .tab button.active {border-bottom: 2px solid #4A90E2; font-weight: bold;}
+        .tabcontent {display: none; padding: 1rem 0;}
+        .tabcontent.active {display: block;}
+    </style>
+</head>
+<body>
+    <h1>知识图谱详情</h1>
+    <div id="kgInfo"></div>
+    <div class="actions">
+        <button id="editBtn">编辑</button>
+        <button id="deleteBtn">删除</button>
+    </div>
+    <h2>抽取历史</h2>
+    <table id="extractions">
+        <thead>
+            <tr><th>Extraction ID</th><th>操作</th></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <!-- Tabs -->
+    <div class="tab" id="tabBar">
+        <button class="tablink active" data-tab="graphTab">图</button>
+        <button class="tablink" data-tab="objectTab">对象</button>
+        <button class="tablink" data-tab="relationTab">关系</button>
+    </div>
+    <!-- Tab contents -->
+    <div id="graphTab" class="tabcontent active">
+        <iframe id="kgGraphIframe" src="" style="width:100%;height:70vh;border:none;"></iframe>
+        <button id="viewFullGraphBtn" style="margin-top:0.5rem;">一键查看完整图</button>
+    </div>
+    <div id="objectTab" class="tabcontent">
+        <table id="objectTable">
+            <thead>
+                <tr><th>序号</th><th>名称</th><th>属性数</th><th>类型</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <div id="relationTab" class="tabcontent">
+        <table id="relationTable">
+            <thead>
+                <tr><th>序号</th><th>名称</th><th>关联的对象</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <script>
+        async function loadKG(){
+            const params = new URLSearchParams(window.location.search);
+            const kgId = params.get('kg_id');
+            if(!kgId){document.body.innerHTML='<p class="error">Missing KG ID.</p>';return;}
+            const resp = await fetch(`/kg/${kgId}`);
+            if(!resp.ok){document.body.innerHTML='<p class="error">KG not found.</p>';return;}
+            const kg = await resp.json();
+            const infoDiv = document.getElementById('kgInfo');
+            infoDiv.innerHTML = `
+                <div class="field"><span class="label">名称:</span> ${kg.name}</div>
+                <div class="field"><span class="label">描述:</span> ${kg.description||''}</div>
+                <div class="field"><span class="label">对象数量:</span> ${kg.entity_count||0}</div>
+                <div class="field"><span class="label">关系数量:</span> ${kg.relation_count||0}</div>
+            `;
+            // Set iframe src for graph tab
+            const kgIframe = document.getElementById('kgGraphIframe');
+            kgIframe.src = `/graph_view?kg_id=${kgId}`;
+            document.getElementById('viewFullGraphBtn').addEventListener('click', () => {
+                window.location.href = `/graph_view?kg_id=${kgId}`;
+            });
+            // Populate extraction list
+            const tbodyExt = document.querySelector('#extractions tbody');
+            tbodyExt.innerHTML='';
+            (kg.extraction_ids||[]).forEach(eid=>{
+                const tr=document.createElement('tr');
+                tr.innerHTML=`<td>${eid}</td><td><button onclick="viewGraph('${eid}')">查看图谱</button></td>`;
+                tbodyExt.appendChild(tr);
+            });
+            // Populate objects tab
+            const objBody = document.querySelector('#objectTable tbody');
+            objBody.innerHTML='';
+            const idToName = {};
+            (kg.graph?.nodes || []).forEach((node, idx)=>{
+                const name = node.properties?.name || node.id;
+                const attrCount = Object.keys(node.properties || {}).length;
+                const type = node.properties?.type || '';
+                idToName[node.id] = name;
+                const tr=document.createElement('tr');
+                tr.innerHTML=`<td>${idx+1}</td><td>${name}</td><td>${attrCount}</td><td>${type}</td>`;
+                objBody.appendChild(tr);
+            });
+            // Populate relationships tab
+            const relBody = document.querySelector('#relationTable tbody');
+            relBody.innerHTML='';
+            (kg.graph?.relationships || []).forEach((rel, idx)=>{
+                const srcName = idToName[rel.source] || rel.source;
+                const tgtName = idToName[rel.target] || rel.target;
+                const tr=document.createElement('tr');
+                tr.innerHTML=`<td>${idx+1}</td><td>${rel.type}</td><td>${srcName}、${tgtName}</td>`;
+                relBody.appendChild(tr);
+            });
+        }
+        function viewGraph(eid){
+            window.location.href = `/graph_view?eid=${eid}`;
+        }
+        async function editKG(){
+            const name = prompt('请输入新名称（留空保持不变）');
+            const description = prompt('请输入新描述（留空保持不变）');
+            const params = new URLSearchParams(window.location.search);
+            const kgId = params.get('kg_id');
+            const payload = {};
+            if(name) payload.name = name;
+            if(description) payload.description = description;
+            const resp = await fetch(`/kg/${kgId}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+            if(resp.ok){await loadKG();} else {alert('编辑失败');}
+        }
+        async function deleteKG(){
+            if(!confirm('确认删除此知识图谱吗？此操作不可恢复。')) return;
+            const params = new URLSearchParams(window.location.search);
+            const kgId = params.get('kg_id');
+            const resp = await fetch(`/kg/${kgId}`, {method:'DELETE'});
+            if(resp.ok){window.location.href='/kg_page';} else {alert('删除失败');}
+        }
+        // Tab switching
+        document.querySelectorAll('.tablink').forEach(btn=>{
+            btn.addEventListener('click',()=>{
+                // remove active
+                document.querySelectorAll('.tablink').forEach(b=>b.classList.remove('active'));
+                document.querySelectorAll('.tabcontent').forEach(c=>c.classList.remove('active'));
+                // set current
+                btn.classList.add('active');
+                const target = btn.getAttribute('data-tab');
+                document.getElementById(target).classList.add('active');
+            });
+        });
+        document.getElementById('editBtn').addEventListener('click', editKG);
+        document.getElementById('deleteBtn').addEventListener('click', deleteKG);
+        loadKG();
+    </script>
+</body>
+</html>

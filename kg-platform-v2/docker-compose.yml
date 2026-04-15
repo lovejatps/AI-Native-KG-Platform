@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  neo4j:
+    image: neo4j:5
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/password
+
+  milvus:
+    image: milvusdb/milvus:latest
+    container_name: milvus
+    ports:
+      - "19530:19530"
+      - "19121:19121"
+    environment:
+      - TZ=UTC
+    command: [milvus, run, standalone]
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - neo4j
+      - milvus
+      - redis

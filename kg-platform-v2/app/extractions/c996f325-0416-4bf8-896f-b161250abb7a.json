@@ -1,0 +1,798 @@
+{
+  "id": "c996f325-0416-4bf8-896f-b161250abb7a",
+  "timestamp": "2026-04-14T08:56:59.481699Z",
+  "filename": "捡个校花做老婆.md",
+  "graph": {
+    "nodes": [
+      {
+        "id": "罗峰",
+        "properties": {
+          "name": "罗峰",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "柳眉",
+        "properties": {
+          "name": "柳眉",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "郑薇",
+        "properties": {
+          "name": "郑薇",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "郑海天",
+        "properties": {
+          "name": "郑海天",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "邵骏华",
+        "properties": {
+          "name": "邵骏华",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "彭威",
+        "properties": {
+          "name": "彭威",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "陈于霖",
+        "properties": {
+          "name": "陈于霖",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "梁少",
+        "properties": {
+          "name": "梁少",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "《捡个校花做老婆》",
+        "properties": {
+          "name": "《捡个校花做老婆》",
+          "type": "作品"
+        }
+      },
+      {
+        "id": "紫荆中学",
+        "properties": {
+          "name": "紫荆中学",
+          "type": "地点"
+        }
+      },
+      {
+        "id": "钟落潭",
+        "properties": {
+          "name": "钟落潭",
+          "type": "地点"
+        }
+      },
+      {
+        "id": "羊城",
+        "properties": {
+          "name": "羊城",
+          "type": "地点"
+        }
+      },
+      {
+        "id": "天河区",
+        "properties": {
+          "name": "天河区",
+          "type": "地点"
+        }
+      },
+      {
+        "id": "高三七班",
+        "properties": {
+          "name": "高三七班",
+          "type": "组织"
+        }
+      },
+      {
+        "id": "武警大队",
+        "properties": {
+          "name": "武警大队",
+          "type": "组织"
+        }
+      },
+      {
+        "id": "出租车司机",
+        "properties": {
+          "name": "出租车司机",
+          "type": "职业"
+        }
+      },
+      {
+        "id": "跆拳道黑带",
+        "properties": {
+          "name": "跆拳道黑带",
+          "type": "身份"
+        }
+      },
+      {
+        "id": "小刀",
+        "properties": {
+          "name": "小刀",
+          "type": "物品"
+        }
+      },
+      {
+        "id": "手机",
+        "properties": {
+          "name": "手机",
+          "type": "物品"
+        }
+      },
+      {
+        "id": "语文课本",
+        "properties": {
+          "name": "语文课本",
+          "type": "物品"
+        }
+      },
+      {
+        "id": "唐大耳",
+        "properties": {
+          "name": "唐大耳",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "黄天业",
+        "properties": {
+          "name": "黄天业",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "王诚",
+        "properties": {
+          "name": "王诚",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "廖乾坤",
+        "properties": {
+          "name": "廖乾坤",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "君怜梦",
+        "properties": {
+          "name": "君怜梦",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "高三【七】班",
+        "properties": {
+          "name": "高三【七】班",
+          "type": "组织"
+        }
+      },
+      {
+        "id": "浙江大学",
+        "properties": {
+          "name": "浙江大学",
+          "type": "地点"
+        }
+      },
+      {
+        "id": "武术社",
+        "properties": {
+          "name": "武术社",
+          "type": "组织"
+        }
+      },
+      {
+        "id": "海天集团",
+        "properties": {
+          "name": "海天集团",
+          "type": "组织"
+        }
+      },
+      {
+        "id": "龙羽",
+        "properties": {
+          "name": "龙羽",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "张强",
+        "properties": {
+          "name": "张强",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "叶安远",
+        "properties": {
+          "name": "叶安远",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "黑狐帮",
+        "properties": {
+          "name": "黑狐帮",
+          "type": "组织"
+        }
+      },
+      {
+        "id": "中学生英语口语全国大赛",
+        "properties": {
+          "name": "中学生英语口语全国大赛",
+          "type": "事件"
+        }
+      },
+      {
+        "id": "英语",
+        "properties": {
+          "name": "英语",
+          "type": "技能"
+        }
+      },
+      {
+        "id": "茶道",
+        "properties": {
+          "name": "茶道",
+          "type": "技能"
+        }
+      },
+      {
+        "id": "龙井",
+        "properties": {
+          "name": "龙井",
+          "type": "物品"
+        }
+      },
+      {
+        "id": "张铁宏",
+        "properties": {
+          "name": "张铁宏",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "张晓康",
+        "properties": {
+          "name": "张晓康",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "陈风来",
+        "properties": {
+          "name": "陈风来",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "郑成铭",
+        "properties": {
+          "name": "郑成铭",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "张弢",
+        "properties": {
+          "name": "张弢",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "马震",
+        "properties": {
+          "name": "马震",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "安哥",
+        "properties": {
+          "name": "安哥",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "岚姐",
+        "properties": {
+          "name": "岚姐",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "唐家",
+        "properties": {
+          "name": "唐家",
+          "type": "家族"
+        }
+      },
+      {
+        "id": "张家",
+        "properties": {
+          "name": "张家",
+          "type": "家族"
+        }
+      },
+      {
+        "id": "天河派出所",
+        "properties": {
+          "name": "天河派出所",
+          "type": "地点"
+        }
+      },
+      {
+        "id": "沈阳军区第三十九团尖刀十七分队",
+        "properties": {
+          "name": "沈阳军区第三十九团尖刀十七分队",
+          "type": "组织"
+        }
+      },
+      {
+        "id": "姬姬",
+        "properties": {
+          "name": "姬姬",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "君老师",
+        "properties": {
+          "name": "君老师",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "黑猫黑狗帮",
+        "properties": {
+          "name": "黑猫黑狗帮",
+          "type": "组织"
+        }
+      },
+      {
+        "id": "奶茶店",
+        "properties": {
+          "name": "奶茶店",
+          "type": "地点"
+        }
+      },
+      {
+        "id": "402 房",
+        "properties": {
+          "name": "402 房",
+          "type": "地点"
+        }
+      },
+      {
+        "id": "二楼",
+        "properties": {
+          "name": "二楼",
+          "type": "地点"
+        }
+      },
+      {
+        "id": "四楼",
+        "properties": {
+          "name": "四楼",
+          "type": "地点"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "source": "罗峰",
+        "target": "岚姐",
+        "type": "帮助"
+      },
+      {
+        "source": "罗峰",
+        "target": "402 房",
+        "type": "租住"
+      },
+      {
+        "source": "罗峰",
+        "target": "紫荆中学",
+        "type": "就读"
+      },
+      {
+        "source": "罗峰",
+        "target": "郑海天",
+        "type": "叔侄"
+      },
+      {
+        "source": "罗峰",
+        "target": "唐大耳",
+        "type": "战友"
+      },
+      {
+        "source": "罗峰",
+        "target": "茶道",
+        "type": "精通"
+      },
+      {
+        "source": "罗峰",
+        "target": "英语",
+        "type": "精通"
+      },
+      {
+        "source": "罗峰",
+        "target": "君怜梦",
+        "type": "师生关系"
+      },
+      {
+        "source": "罗峰",
+        "target": "郑薇",
+        "type": "救命恩人"
+      },
+      {
+        "source": "罗峰",
+        "target": "浙江大学",
+        "type": "目标学校"
+      },
+      {
+        "source": "罗峰",
+        "target": "唐大耳",
+        "type": "朋友"
+      },
+      {
+        "source": "罗峰",
+        "target": "高三【七】班",
+        "type": "新同学"
+      },
+      {
+        "source": "罗峰",
+        "target": "语文课本",
+        "type": "阅读"
+      },
+      {
+        "source": "罗峰",
+        "target": "手机",
+        "type": "使用"
+      },
+      {
+        "source": "罗峰",
+        "target": "小刀",
+        "type": "持有"
+      },
+      {
+        "source": "罗峰",
+        "target": "郑薇",
+        "type": "救助"
+      },
+      {
+        "source": "罗峰",
+        "target": "柳眉",
+        "type": "救助"
+      },
+      {
+        "source": "罗峰",
+        "target": "高三七班",
+        "type": "就读于"
+      },
+      {
+        "source": "罗峰",
+        "target": "紫荆中学",
+        "type": "就读于"
+      },
+      {
+        "source": "罗峰",
+        "target": "出租车司机",
+        "type": "职业"
+      },
+      {
+        "source": "柳眉",
+        "target": "高三【七】班",
+        "type": "学生"
+      },
+      {
+        "source": "柳眉",
+        "target": "郑薇",
+        "type": "室友"
+      },
+      {
+        "source": "柳眉",
+        "target": "郑薇",
+        "type": "同学"
+      },
+      {
+        "source": "柳眉",
+        "target": "跆拳道黑带",
+        "type": "身份"
+      },
+      {
+        "source": "柳眉",
+        "target": "高三七班",
+        "type": "就读于"
+      },
+      {
+        "source": "柳眉",
+        "target": "紫荆中学",
+        "type": "就读于"
+      },
+      {
+        "source": "郑薇",
+        "target": "郑海天",
+        "type": "女儿"
+      },
+      {
+        "source": "郑薇",
+        "target": "高三【七】班",
+        "type": "学生"
+      },
+      {
+        "source": "郑薇",
+        "target": "郑海天",
+        "type": "父亲"
+      },
+      {
+        "source": "郑薇",
+        "target": "高三七班",
+        "type": "就读于"
+      },
+      {
+        "source": "郑薇",
+        "target": "紫荆中学",
+        "type": "就读于"
+      },
+      {
+        "source": "郑海天",
+        "target": "海天集团",
+        "type": "老板"
+      },
+      {
+        "source": "郑海天",
+        "target": "郑薇",
+        "type": "女儿"
+      },
+      {
+        "source": "邵骏华",
+        "target": "武警大队",
+        "type": "任职于"
+      },
+      {
+        "source": "彭威",
+        "target": "罗峰",
+        "type": "下属"
+      },
+      {
+        "source": "彭威",
+        "target": "武警大队",
+        "type": "任职于"
+      },
+      {
+        "source": "陈于霖",
+        "target": "高三【七】班",
+        "type": "班主任"
+      },
+      {
+        "source": "陈于霖",
+        "target": "高三七班",
+        "type": "班主任"
+      },
+      {
+        "source": "梁少",
+        "target": "《捡个校花做老婆》",
+        "type": "作者"
+      },
+      {
+        "source": "唐大耳",
+        "target": "沈阳军区第三十九团尖刀十七分队",
+        "type": "亲属关联"
+      },
+      {
+        "source": "唐大耳",
+        "target": "张家",
+        "type": "仇敌"
+      },
+      {
+        "source": "唐大耳",
+        "target": "唐家",
+        "type": "所属家族"
+      },
+      {
+        "source": "唐大耳",
+        "target": "罗峰",
+        "type": "追随"
+      },
+      {
+        "source": "唐大耳",
+        "target": "张强",
+        "type": "初中同学"
+      },
+      {
+        "source": "唐大耳",
+        "target": "紫荆中学",
+        "type": "就读于"
+      },
+      {
+        "source": "唐大耳",
+        "target": "高三【七】班",
+        "type": "学生"
+      },
+      {
+        "source": "黄天业",
+        "target": "罗峰",
+        "type": "敌对"
+      },
+      {
+        "source": "黄天业",
+        "target": "武术社",
+        "type": "隶属于"
+      },
+      {
+        "source": "黄天业",
+        "target": "紫荆中学",
+        "type": "就读于"
+      },
+      {
+        "source": "黄天业",
+        "target": "武术社",
+        "type": "创立者"
+      },
+      {
+        "source": "王诚",
+        "target": "武术社",
+        "type": "成员"
+      },
+      {
+        "source": "王诚",
+        "target": "高三【七】班",
+        "type": "学生"
+      },
+      {
+        "source": "廖乾坤",
+        "target": "武术社",
+        "type": "成员"
+      },
+      {
+        "source": "廖乾坤",
+        "target": "高三【七】班",
+        "type": "学生"
+      },
+      {
+        "source": "君怜梦",
+        "target": "中学生英语口语全国大赛",
+        "type": "邀请参加"
+      },
+      {
+        "source": "君怜梦",
+        "target": "叶安远",
+        "type": "外孙女"
+      },
+      {
+        "source": "君怜梦",
+        "target": "浙江大学",
+        "type": "毕业于"
+      },
+      {
+        "source": "君怜梦",
+        "target": "紫荆中学",
+        "type": "任职于"
+      },
+      {
+        "source": "君怜梦",
+        "target": "紫荆中学",
+        "type": "老师"
+      },
+      {
+        "source": "张强",
+        "target": "张家",
+        "type": "所属家族"
+      },
+      {
+        "source": "张强",
+        "target": "张弢",
+        "type": "兄弟"
+      },
+      {
+        "source": "张强",
+        "target": "张铁宏",
+        "type": "父子"
+      },
+      {
+        "source": "张强",
+        "target": "唐大耳",
+        "type": "敌对"
+      },
+      {
+        "source": "张强",
+        "target": "黑狐帮",
+        "type": "关联"
+      },
+      {
+        "source": "张强",
+        "target": "紫荆中学",
+        "type": "就读于"
+      },
+      {
+        "source": "张晓康",
+        "target": "天河派出所",
+        "type": "任职"
+      },
+      {
+        "source": "陈风来",
+        "target": "天河派出所",
+        "type": "任职"
+      },
+      {
+        "source": "郑成铭",
+        "target": "天河派出所",
+        "type": "任职"
+      },
+      {
+        "source": "张弢",
+        "target": "黑狐帮",
+        "type": "骨干"
+      },
+      {
+        "source": "张弢",
+        "target": "张铁宏",
+        "type": "父子"
+      },
+      {
+        "source": "安哥",
+        "target": "黑狐帮",
+        "type": "所属"
+      },
+      {
+        "source": "安哥",
+        "target": "黑狐帮",
+        "type": "成员"
+      },
+      {
+        "source": "岚姐",
+        "target": "二楼",
+        "type": "居住"
+      },
+      {
+        "source": "岚姐",
+        "target": "402 房",
+        "type": "出租"
+      },
+      {
+        "source": "岚姐",
+        "target": "奶茶店",
+        "type": "经营"
+      },
+      {
+        "source": "岚姐",
+        "target": "罗峰",
+        "type": "房东租客"
+      },
+      {
+        "source": "姬姬",
+        "target": "402 房",
+        "type": "原租住"
+      },
+      {
+        "source": "君老师",
+        "target": "姬姬",
+        "type": "室友"
+      },
+      {
+        "source": "君老师",
+        "target": "402 房",
+        "type": "居住"
+      }
+    ]
+  }
+}

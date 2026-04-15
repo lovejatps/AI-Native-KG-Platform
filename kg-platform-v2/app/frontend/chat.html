@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>KG Platform – Chat</title>
+    <style>
+        body {font-family: Arial, sans-serif; margin: 2rem;}
+        #chat {border: 1px solid #ccc; padding: 1rem; height: 400px; overflow-y: auto;}
+        .msg {margin: 0.5rem 0;}
+        .user {color: blue;}
+        .bot {color: green;}
+    </style>
+    <script>
+        async function sendMessage() {
+            const input = document.getElementById('msgInput');
+            const text = input.value.trim();
+            if (!text) return;
+            appendMessage('user', text);
+            input.value = '';
+            const resp = await fetch('/chat/message', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: text})
+            });
+            const data = await resp.json();
+            appendMessage('bot', data.reply);
+        }
+        function appendMessage(cls, text) {
+            const chat = document.getElementById('chat');
+            const div = document.createElement('div');
+            div.className = 'msg ' + cls;
+            div.textContent = text;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+        // Allow Enter key to send
+        document.addEventListener('DOMContentLoaded', () => {
+            const input = document.getElementById('msgInput');
+            input.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+        });
+    </script>
+</head>
+<body>
+    <nav style="margin-bottom:1rem;">
+        <a href="/kg_page">知识图谱列表</a> |
+        <a href="/chat">Chat</a>
+    </nav>
+    <h1>KG Chat Interface</h1>
+    <div id="chat"></div>
+    <input type="text" id="msgInput" placeholder="输入消息并回车发送" style="width:80%" />
+    <button onclick="sendMessage()">发送</button>
+</body>
+</html>

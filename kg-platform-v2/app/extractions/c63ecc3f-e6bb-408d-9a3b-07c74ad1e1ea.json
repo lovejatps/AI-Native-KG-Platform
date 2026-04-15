@@ -1,0 +1,93 @@
+{
+  "id": "c63ecc3f-e6bb-408d-9a3b-07c74ad1e1ea",
+  "timestamp": "2026-04-14T11:41:30.037736Z",
+  "filename": "qz_test.md",
+  "graph": {
+    "nodes": [
+      {
+        "id": "青竹峰",
+        "properties": {
+          "name": "青竹峰",
+          "type": "地点"
+        }
+      },
+      {
+        "id": "阿禾",
+        "properties": {
+          "name": "阿禾",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "师父",
+        "properties": {
+          "name": "师父",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "后山",
+        "properties": {
+          "name": "后山",
+          "type": "地点"
+        }
+      },
+      {
+        "id": "嫩竹",
+        "properties": {
+          "name": "嫩竹",
+          "type": "植物"
+        }
+      },
+      {
+        "id": "石坛",
+        "properties": {
+          "name": "石坛",
+          "type": "地点"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "source": "阿禾",
+        "target": "师父",
+        "type": "行礼"
+      },
+      {
+        "source": "阿禾",
+        "target": "石坛",
+        "type": "位于"
+      },
+      {
+        "source": "阿禾",
+        "target": "嫩竹",
+        "type": "照料"
+      },
+      {
+        "source": "阿禾",
+        "target": "嫩竹",
+        "type": "救助"
+      },
+      {
+        "source": "阿禾",
+        "target": "师父",
+        "type": "师徒"
+      },
+      {
+        "source": "阿禾",
+        "target": "青竹峰",
+        "type": "位于"
+      },
+      {
+        "source": "师父",
+        "target": "阿禾",
+        "type": "认可"
+      },
+      {
+        "source": "师父",
+        "target": "阿禾",
+        "type": "惩罚"
+      }
+    ]
+  }
+}

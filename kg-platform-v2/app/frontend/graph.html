@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>KG Platform – Graph Visualization</title>
+    <style>
+        body {font-family: Arial, sans-serif; margin: 2rem;}
+        #output {white-space: pre; background: #f9f9f9; padding: 1rem; border: 1px solid #ccc;}
+    </style>
+    <script>
+        async function loadGraph() {
+            const name = document.getElementById('entityName').value.trim();
+            if (!name) return;
+            const resp = await fetch(`/entity/${encodeURIComponent(name)}`);
+            const data = await resp.json();
+            const out = document.getElementById('output');
+            out.textContent = JSON.stringify(data, null, 2);
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('loadBtn').addEventListener('click', loadGraph);
+        });
+    </script>
+</head>
+<body>
+    <h1>Graph Visualization (Entity Detail)</h1>
+    <input type="text" id="entityName" placeholder="输入实体名称" />
+    <button id="loadBtn">加载实体</button>
+    <div id="output"></div>
+</body>
+</html>

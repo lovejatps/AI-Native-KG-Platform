@@ -1,0 +1,59 @@
+{
+  "id": "2be1d15c-7a72-47c5-81f8-4be115be277f",
+  "timestamp": "2026-04-14T07:48:32.267104Z",
+  "filename": "qz_test.md",
+  "graph": {
+    "nodes": [
+      {
+        "id": "青竹悟",
+        "properties": {
+          "type": "作品",
+          "name": "青竹悟"
+        }
+      },
+      {
+        "id": "青竹峰",
+        "properties": {
+          "type": "地点",
+          "name": "青竹峰"
+        }
+      },
+      {
+        "id": "阿禾",
+        "properties": {
+          "type": "人物",
+          "name": "阿禾"
+        }
+      },
+      {
+        "id": "师父",
+        "properties": {
+          "type": "人物",
+          "name": "师父"
+        }
+      },
+      {
+        "id": "后山",
+        "properties": {
+          "type": "地点",
+          "name": "后山"
+        }
+      },
+      {
+        "id": "嫩竹",
+        "properties": {
+          "type": "植物",
+          "name": "嫩竹"
+        }
+      },
+      {
+        "id": "石坛",
+        "properties": {
+          "type": "地点",
+          "name": "石坛"
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

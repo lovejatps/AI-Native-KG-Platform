@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>知识图谱列表</title>
+    <style>
+        body {font-family: Arial, sans-serif; margin: 2rem;}
+        table {border-collapse: collapse; width: 100%;}
+        th, td {border: 1px solid #ddd; padding: 8px; text-align: left;}
+        th {background-color: #f2f2f2;}
+        .actions button {margin-right: 5px;}
+        #addKgBtn {float: right; margin-bottom: 1rem;}
+    </style>
+</head>
+<body>
+    <nav style="margin-bottom:1rem;">
+        <a href="/kg_page">知识图谱列表</a> |
+        <a href="/chat">Chat</a>
+    </nav>
+    <h1>知识图谱</h1>
+
+    <button id="addKgBtn">新增知识图谱</button>
+    <table id="kgTable">
+        <thead>
+            <tr>
+                <th>序号</th>
+                <th>名称</th>
+                <th>对象数量</th>
+                <th>关系数量</th>
+                <th>描述</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <script>
+        async function loadKGs(){
+            const resp = await fetch('/kg/list');
+            const data = await resp.json();
+            const tbody = document.querySelector('#kgTable tbody');
+            tbody.innerHTML = '';
+            data.kgs.forEach((kg, idx)=>{
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${idx+1}</td>
+                    <td>${kg.name}</td>
+                    <td>${kg.entity_count || 0}</td>
+                    <td>${kg.relation_count || 0}</td>
+                    <td>${kg.description || ''}</td>
+                    <td class="actions">
+                        <button onclick="viewKG('${kg.id}', event)">查看</button>
+                        <button onclick="importDocs('${kg.id}')">导入文档</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        async function viewKG(id, evt){
+            // Directly open KG 详情页（包含图、对象、关系三标签）
+            if (!id) {
+                alert('KG ID 缺失，无法查看详情');
+                if (evt && evt.target) evt.target.disabled = true;
+                return;
+            }
+            window.location.href = `/kg_detail?kg_id=${id}`;
+        }
+        function importDocs(id){
+            // 跳转到上传页面，传递 kg_id
+            window.location.href = `/upload?kg_id=${id}`;
+        }
+        async function addKG(){
+            const name = prompt('请输入知识图谱名称（必填）');
+            if(!name){alert('名称为必填项');return;}
+            const description = prompt('请输入描述（可选）');
+            const resp = await fetch('/kg/create', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({name, description})
+            });
+            if(resp.ok){
+                await loadKGs();
+            } else {
+                const err = await resp.json();
+                alert('创建失败: '+ (err.detail || err.message));
+            }
+        }
+        document.getElementById('addKgBtn').addEventListener('click', addKG);
+        // Initial load
+        loadKGs();
+    </script>
+</body>
+</html>

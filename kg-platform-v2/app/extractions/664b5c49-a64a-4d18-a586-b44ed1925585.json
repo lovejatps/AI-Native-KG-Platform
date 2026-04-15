@@ -1,0 +1,100 @@
+{
+  "id": "664b5c49-a64a-4d18-a586-b44ed1925585",
+  "timestamp": "2026-04-15T05:17:48.550730Z",
+  "filename": "qz_test.md",
+  "graph": {
+    "nodes": [
+      {
+        "id": "阿禾",
+        "properties": {
+          "occupation": "弟子",
+          "gender": "男",
+          "name": "阿禾",
+          "type": "人物",
+          "age": 8
+        }
+      },
+      {
+        "id": "师父",
+        "properties": {
+          "occupation": "师父",
+          "name": "师父",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "青竹峰",
+        "properties": {
+          "name": "青竹峰",
+          "type": "地点"
+        }
+      },
+      {
+        "id": "嫩竹",
+        "properties": {
+          "color": "青",
+          "name": "嫩竹",
+          "type": "植物"
+        }
+      },
+      {
+        "id": "竹片",
+        "properties": {
+          "name": "竹片",
+          "type": "物品"
+        }
+      },
+      {
+        "id": "石坛",
+        "properties": {
+          "name": "石坛",
+          "type": "地点"
+        }
+      },
+      {
+        "id": "后山",
+        "properties": {
+          "name": "后山",
+          "type": "地点"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "source": "阿禾",
+        "target": "石坛",
+        "type": "位于"
+      },
+      {
+        "source": "阿禾",
+        "target": "后山",
+        "type": "被罚至"
+      },
+      {
+        "source": "阿禾",
+        "target": "竹片",
+        "type": "使用"
+      },
+      {
+        "source": "阿禾",
+        "target": "嫩竹",
+        "type": "照料"
+      },
+      {
+        "source": "阿禾",
+        "target": "青竹峰",
+        "type": "位于"
+      },
+      {
+        "source": "阿禾",
+        "target": "师父",
+        "type": "师徒关系"
+      },
+      {
+        "source": "师父",
+        "target": "阿禾",
+        "type": "观察"
+      }
+    ]
+  }
+}

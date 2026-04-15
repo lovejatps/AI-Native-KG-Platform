@@ -1,0 +1,50 @@
+{
+  "id": "f4ecc366-f11f-4500-90a4-a07abfb7e993",
+  "timestamp": "2026-04-12T00:39:48.051531Z",
+  "filename": "青竹悟 动画短片分镜头脚本 (1)21.md",
+  "graph": {
+    "nodes": [
+      {
+        "id": "OCR",
+        "properties": {
+          "name": "OCR"
+        }
+      },
+      {
+        "id": "unavailable",
+        "properties": {
+          "name": "unavailable"
+        }
+      },
+      {
+        "id": "missing",
+        "properties": {
+          "name": "missing"
+        }
+      },
+      {
+        "id": "pytesseract",
+        "properties": {
+          "name": "pytesseract"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "source": "OCR",
+        "target": "unavailable",
+        "type": "related_to"
+      },
+      {
+        "source": "unavailable",
+        "target": "missing",
+        "type": "related_to"
+      },
+      {
+        "source": "missing",
+        "target": "pytesseract",
+        "type": "related_to"
+      }
+    ]
+  }
+}

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>KG Platform – Graph Viewer</title>
+    <!-- Cytoscape.js CDN -->
+    <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+    <style>
+        body {font-family: Arial, sans-serif; margin: 2rem;}
+        #cy {width: 100%; height: 70vh; border:1px solid #ddd;}
+        .error {color:#d00; padding:1rem;}
+    </style>
+    <script>
+        async function loadGraph() {
+            const params = new URLSearchParams(window.location.search);
+            const kgId = params.get('kg_id');
+            const eid = params.get('eid');
+            let resp;
+            if (kgId) {
+                // 优先通过 KG ID 拉取聚合图
+                resp = await fetch(`/kg/${kgId}/graph`);
+            } else if (eid) {
+                // 退化到单次抽取（旧方式）
+                resp = await fetch(`/extractions/${eid}`);
+            } else {
+                document.body.innerHTML = '<p class="error">Missing KG ID or Extraction ID.</p>'; return;
+            }
+            if (!resp.ok) { document.body.innerHTML = '<p class="error">Failed to load graph.</p>'; return; }
+            const data = await resp.json();
+            if (!data.graph || !data.graph.nodes?.length) {
+                document.body.innerHTML = '<p class="error">Graph data is empty.</p>'; return;
+            }
+            const elements = [];
+            data.graph.nodes.forEach(n => {
+                const id = n.id?.toString() || Math.random().toString(36).substr(2,9);
+                elements.push({ data: { id, label: n.name || n.id || '' } });
+            });
+            if (Array.isArray(data.graph.edges)) {
+                data.graph.edges.forEach(e => {
+                    const src = e.source?.toString();
+                    const tgt = e.target?.toString();
+                    if (src && tgt) {
+                        elements.push({ data: { id: `e${src}-${tgt}`, source: src, target: tgt, label: e.type || '' } });
+                    }
+                });
+            }
+            const cy = cytoscape({
+                container: document.getElementById('cy'),
+                elements: elements,
+                style: [
+                    { selector: 'node', style: { 'background-color': '#4A90E2', 'label': 'data(label)', 'color': '#fff', 'font-size': '12px', 'text-valign': 'center', 'text-halign': 'center', 'width': '40px', 'height': '40px' } },
+                    { selector: 'edge', style: { 'width': 2, 'line-color': '#bbb', 'target-arrow-color': '#bbb', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier', 'label': 'data(label)', 'font-size': '10px', 'color': '#555', 'text-rotation': 'autorotate' } }
+                ],
+                layout: { name: 'cose' }
+            });
+        }
+        document.addEventListener('DOMContentLoaded', loadGraph);
+    </script>
+</head>
+<body>
+    <h1>抽取的图谱详情</h1>
+
+    <div id="cy">Loading graph...</div>
+</body>
+</html>

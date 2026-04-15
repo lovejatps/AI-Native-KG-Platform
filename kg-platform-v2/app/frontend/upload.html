@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>KG Platform – File Upload</title>
+    <style>
+        body {font-family: Arial, sans-serif; margin: 2rem;}
+        .status {margin-top: 1rem; color: green;}
+    </style>
+</head>
+<body>
+
+    <h1>上传文档进行 KG 抽取</h1>
+    <input type="file" id="fileInput" />
+    <button onclick="upload()">上传并处理</button>
+    <div class="status" id="status"></div>
+    <div id="linkContainer" style="margin-top:1rem;"></div>
+    <script>
+        async function upload() {
+            const input = document.getElementById('fileInput');
+            if (!input.files.length) { alert('请选择文件'); return; }
+            const file = input.files[0];
+            const form = new FormData();
+            form.append('file', file);
+
+            const urlParams = new URLSearchParams(window.location.search);
+        const kgId = urlParams.get('kg_id');
+        const endpoint = kgId ? `/document/upload_file?kg_id=${kgId}` : '/document/upload_file';
+        const resp = await fetch(endpoint, {
+                method: 'POST',
+                body: form
+            });
+            const data = await resp.json();
+            if (!data.extraction_id) {
+                document.getElementById('status').textContent = `错误: ${data.message || '未知错误'}`;
+                return;
+            }
+            const extractionId = data.extraction_id;
+            document.getElementById('status').textContent = `已接收文件: ${data.filename}，抽取进行中…`;
+
+            const poll = async () => {
+                const sResp = await fetch(`/extraction_status/${extractionId}`);
+                const sData = await sResp.json();
+                if (sData.status === 'completed') {
+                    document.getElementById('status').textContent = `抽取完成: ${data.filename}`;
+                    const linkDiv = document.getElementById('linkContainer');
+                    const a = document.createElement('a');
+                    // 读取 URL 中的 kg_id（如果有）
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const kgId = urlParams.get('kg_id');
+                    a.href = kgId ? `/graph_view?kg_id=${kgId}` : `/graph_view?eid=${extractionId}`;
+                    a.textContent = kgId ? '查看合并后的知识图谱' : '查看抽取的图谱';
+                    linkDiv.innerHTML = '';
+                    linkDiv.appendChild(a);
+                } else if (sData.status === 'failed') {
+                    document.getElementById('status').textContent = `抽取失败: ${sData.message}`;
+                } else {
+                    setTimeout(poll, 1500);
+                }
+            };
+            poll();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>KG Platform – Entity Detail</title>
+    <style>
+        body {font-family: Arial, sans-serif; margin: 2rem;}
+        .section {margin-top: 1rem;}
+    </style>
+</head>
+<body>
+    <h1 id="title">实体详情</h1>
+    <div class="section" id="attributes"></div>
+    <div class="section" id="relations"></div>
+    <script>
+        // 从 URL 参数获取实体名称
+        const params = new URLSearchParams(window.location.search);
+        const name = params.get('name');
+        if (!name) { document.getElementById('title').textContent = '缺少实体名称'; }
+        else {
+            document.getElementById('title').textContent = `实体: ${name}`;
+            fetch(`/entity/${encodeURIComponent(name)}`)
+                .then(r => r.json())
+                .then(data => {
+                    const attrDiv = document.getElementById('attributes');
+                    const relDiv = document.getElementById('relations');
+                    if (data.node) {
+                        attrDiv.innerHTML = `<h2>属性</h2><pre>${JSON.stringify(data.node, null, 2)}</pre>`;
+                    } else { attrDiv.innerHTML = '<p>未找到实体</p>'; }
+                    if (data.relations && data.relations.length) {
+                        let html = '<h2>直接关系 (1跳)</h2><ul>';
+                        data.relations.forEach(r => {
+                            html += `<li>路径: ${r.path.join(' → ')} , 关系: ${r.relations.join(', ')}</li>`;
+                        });
+                        html += '</ul>';
+                        relDiv.innerHTML = html;
+                    } else { relDiv.innerHTML = '<p>无直接关系</p>'; }
+                });
+        }
+    </script>
+</body>
+</html>

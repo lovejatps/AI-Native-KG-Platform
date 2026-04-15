@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>KG Platform – Extraction List</title>
+    <style>
+        body {font-family: Arial, sans-serif; margin: 2rem;}
+        table {border-collapse: collapse; width: 100%;}
+        th, td {border: 1px solid #ccc; padding: 0.5rem; text-align: left;}
+        th {background: #f0f0f0;}
+    </style>
+    <script>
+        async function loadList() {
+            const resp = await fetch('/extractions');
+            const data = await resp.json();
+            const tbody = document.getElementById('listBody');
+            tbody.innerHTML = '';
+            (data.extractions || []).forEach(item => {
+                const tr = document.createElement('tr');
+                const tdTime = document.createElement('td');
+                tdTime.textContent = item.timestamp;
+                const tdFile = document.createElement('td');
+                tdFile.textContent = item.filename;
+                const tdLink = document.createElement('td');
+                const a = document.createElement('a');
+                a.href = `/graph_view?eid=${item.id}`;
+                a.textContent = '查看图谱';
+                tdLink.appendChild(a);
+                tr.appendChild(tdTime);
+                tr.appendChild(tdFile);
+                tr.appendChild(tdLink);
+                tbody.appendChild(tr);
+            });
+        }
+        document.addEventListener('DOMContentLoaded', loadList);
+    </script>
+</head>
+<body>
+    <h1>已抽取的图谱列表（按时间倒序）</h1>
+
+    <table>
+        <thead>
+            <tr><th>时间</th><th>文件名</th><th>操作</th></tr>
+        </thead>
+        <tbody id="listBody"></tbody>
+    </table>
+</body>
+</html>
