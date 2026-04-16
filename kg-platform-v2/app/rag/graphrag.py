@@ -71,11 +71,14 @@ def graphrag_query(question: str, top_k: int = 5) -> str:
 
     # 3️⃣ Decide routing (graph / vector) via LLMRouter
     from .router import LLMRouter
+
     router = LLMRouter()
     decision = router.route(question)
     # If vector retrieval is disabled, skip Milvus hits (already obtained but ignore)
     if not decision.get("vector", True):
-        _logger.info("Router decided to skip vector search – returning fallback response.")
+        _logger.info(
+            "Router decided to skip vector search – returning fallback response."
+        )
         return f"Vector search disabled for query: {question}"
 
     # 4️⃣ Neo4j retrieval for each hit – only if graph flag true
@@ -87,16 +90,26 @@ def graphrag_query(question: str, top_k: int = 5) -> str:
             try:
                 # Heuristic: if question contains multi‑hop keywords, use variable‑length path query
                 lower_q = question.lower()
-                multi_hop = any(tok in lower_q for tok in ["上级的上级", "上上级", "上级的上级的上级", "上2级", "ancestor", "superior"])
+                multi_hop = any(
+                    tok in lower_q
+                    for tok in [
+                        "上级的上级",
+                        "上上级",
+                        "上级的上级的上级",
+                        "上2级",
+                        "ancestor",
+                        "superior",
+                    ]
+                )
                 if multi_hop:
                     # Variable‑length path: min 2 hops, max 3 (configurable)
-                    path_results = neo.variable_path_query(start_name=entity_name, min_hops=2, max_hops=3)
+                    path_results = neo.variable_path_query(
+                        start_name=entity_name, min_hops=2, max_hops=3
+                    )
                     for path_info in path_results:
                         path = " -> ".join(path_info.get("path", []))
                         rels = ", ".join(path_info.get("relations", []))
-                        snippet = (
-                            f"Path '{path}' (relations: {rels}) – similarity: {distance:.2f}"
-                        )
+                        snippet = f"Path '{path}' (relations: {rels}) – similarity: {distance:.2f}"
                         result_chunks.append(snippet)
                     continue  # skip exact/full‑text when multi‑hop handled
 
@@ -122,7 +135,9 @@ def graphrag_query(question: str, top_k: int = 5) -> str:
                         snippet = (
                             f"Entity '{entity_name}' (type: {ent_type}) "
                             + (
-                                f"with relations: {rel_str}" if rel_str else "has no outgoing relations"
+                                f"with relations: {rel_str}"
+                                if rel_str
+                                else "has no outgoing relations"
                             )
                             + f" – similarity score: {distance:.2f}"
                         )
@@ -153,60 +168,4 @@ def graphrag_query(question: str, top_k: int = 5) -> str:
                             f"{r['rel_type']} -> {r['target']} ({r['target_type']})"
                             for r in rels
                         )
-                        snippet = (
-                            f"Entity '{ft_name}' (type: {ent_type}) "
-                            + (
-                                f"with relations: {rel_str}" if rel_str else "has no outgoing relations"
-                            )
-                            + f" – similarity score: {distance:.2f} (ft score: {ft.get('score'):.2f})"
-                        )
-                        result_chunks.append(snippet)
-            except Exception as e:
-                _logger.error(f"Neo4j query failed for entity '{entity_name}': {e}")
-                continue
-    else:
-        _logger.info("Router decided to skip graph lookup – returning vector‑only results.")
-        # Build simple snippets from vector hits only
-        for key, distance, meta in hits:
-            name = meta.get("entity_name") or meta.get("key") or str(key)
-            snippet = f"Vector hit '{name}' – similarity score: {distance:.2f}"
-            result_chunks.append(snippet)
-                # Retrieve the entity type for the fuzzy‑matched node
-                sub_cypher = """
-                MATCH (e:Entity {name: $ft_name})
-                OPTIONAL MATCH (e)-[r]->(connected)
-                RETURN e.type AS type, collect({
-                    rel_type: type(r),
-                    target: connected.name,
-                    target_type: connected.type
-                }) AS relations
-                """
-                sub_records = neo.run(sub_cypher, {"ft_name": ft_name})
-                for rec in sub_records:
-                    ent_type = rec.get("type")
-                    rels = rec.get("relations") or []
-                    rel_str = ", ".join(
-                        f"{r['rel_type']} -> {r['target']} ({r['target_type']})"
-                        for r in rels
-                    )
-                    snippet = (
-                        f"Entity '{ft_name}' (type: {ent_type}) "
-                        + (
-                            f"with relations: {rel_str}"
-                            if rel_str
-                            else "has no outgoing relations"
-                        )
-                        + f" – similarity score: {distance:.2f} (ft score: {ft.get('score'):.2f})"
-                    )
-                    result_chunks.append(snippet)
-        except Exception as e:
-            _logger.error(f"Neo4j query failed for entity '{entity_name}': {e}")
-            continue
 
-    if not result_chunks:
-        return f"No graph structures could be retrieved for: {question}"
-
-    # 5️⃣ Assemble final answer
-    header = f"GraphRAG results for query: '{question}'".strip()
-    body = "\n".join(result_chunks)
-    return f"{header}\n{body}"

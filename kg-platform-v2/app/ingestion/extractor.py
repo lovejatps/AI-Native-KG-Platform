@@ -115,7 +115,6 @@ def extract_kg(
                 except Exception:
                     pass
             # 2️⃣ 正则块提取实体 / 关系
-            import re
 
             entities = []
             relations = []

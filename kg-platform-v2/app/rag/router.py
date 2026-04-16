@@ -74,18 +74,12 @@ class LLMRouter:
         return self.llm.chat(prompt)
 
     def _parse_response(self, raw: str) -> Dict[str, bool]:
-        try:
-            data = json.loads(raw)
-            # Ensure required keys exist and are booleans
-            graph = bool(data.get("graph", True))
-            vector = bool(data.get("vector", True))
-            return {"graph": graph, "vector": vector}
-        except Exception as e:
-            _logger.warning(
-                f"LLMRouter JSON parse failed: {e}. Raw response: {raw[:200]}"
-            )
-            # Fallback to hybrid mode
+        data = self.llm._parse_response(raw)
+        if not data:
             return {"graph": True, "vector": True}
+        graph = bool(data.get("graph", True))
+        vector = bool(data.get("vector", True))
+        return {"graph": graph, "vector": vector}
 
     def route(self, question: str) -> Dict[str, bool]:
         """Return routing decision for *question*.

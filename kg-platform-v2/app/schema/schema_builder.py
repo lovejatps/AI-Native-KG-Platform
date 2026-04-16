@@ -40,10 +40,10 @@ def build_schema(text: str):
     JSON格式输出
     """
     res = llm.chat(prompt)
-    try:
-        schema = json.loads(res)
-    except Exception:
-        schema = {"entities": ["Unknown"], "relations": [], "properties": {}}
+        schema = llm._parse_response(res)
+        if not schema:
+            schema = {"entities": ["Unknown"], "relations": [], "properties": {}}
+
 
     # 4️⃣ Persist versioned schema locally
     try:

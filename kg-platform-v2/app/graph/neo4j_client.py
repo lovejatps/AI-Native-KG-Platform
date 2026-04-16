@@ -1,5 +1,7 @@
 from neo4j import GraphDatabase
 import os
+import json
+import re
 
 
 class Neo4jClient:
@@ -35,7 +37,7 @@ class Neo4jClient:
             _log = get_logger(__name__)
             _log.warning("Failed to ensure Neo4j full-text index during client init")
 
-    def run(self, query, params=None):
+    def _fallback_handler(self, query, params=None):
         """Execute a Cypher query and return a list of records.
         If a real Neo4j connection is unavailable (fallback mode),
         return an empty list so that calling code can proceed without error.
@@ -211,6 +213,13 @@ class Neo4jClient:
                 return results
             # Default no‑op
             return []
+        with self.driver.session() as session:
+            return [record for record in session.run(query, params or {})]
+
+    def run(self, query, params=None):
+        """Public run method that dispatches to real Neo4j or fallback handler."""
+        if getattr(self, "_fallback", False) or self.driver is None:
+            return self._fallback_handler(query, params)
         with self.driver.session() as session:
             return [record for record in session.run(query, params or {})]
 

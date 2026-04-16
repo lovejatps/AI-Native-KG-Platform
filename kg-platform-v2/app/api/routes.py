@@ -1,62 +1,20 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import (
+    APIRouter,
+    Request,
+    HTTPException,
+    UploadFile,
+    File,
+    BackgroundTasks,
+    Response,
+)
+from fastapi.responses import FileResponse, RedirectResponse
 from typing import Dict, Any, Optional
 from ..graph.neo4j_client import Neo4jClient
-
-# Optional KGAgent functionality (omitted in test environment)
-# The original code attempted to import a KGAgent which depends on heavy
-# infrastructure. For the purpose of the integration test we provide a
-# minimal stub that satisfies the interface used by the router.
-
-
-class _DummyAgent:
-    def run(self, task: str):
-        return f"DummyAgent received task: {task}"
-
+from ..ingestion.pipeline import process_document
+import os
+import uuid, tempfile, shutil
 
 router = APIRouter()
-agent = _DummyAgent()
-
-
-@router.post("/agent/run")
-def run_agent(payload: Dict[str, Any]):
-    task = payload.get("task", "")
-    return {"result": agent.run(task)}
-
-
-# ----------------------------------------------------------
-# Incremental document ingestion endpoint
-# ----------------------------------------------------------
-from ..ingestion.pipeline import process_document
-
-
-@router.post("/document/ingest")
-def ingest_document(payload: Dict[str, Any]):
-    """Trigger the full document ingestion pipeline.
-
-    Expected JSON payload:
-    {
-        "file_path": "absolute/or/relative/path/to/file.pdf"
-    }
-    Returns a simple status object.
-    """
-    file_path = payload.get("file_path")
-    if not file_path:
-        return {"status": "error", "message": "Missing 'file_path' in request"}
-    try:
-        process_document(file_path)
-        return {"status": "processed", "file": file_path}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
-
-# -------------------------------
-# 新增文件上传接口（前端表单使用）
-# -------------------------------
-from fastapi import UploadFile, File
-
-
-from fastapi import UploadFile, File, BackgroundTasks
-import uuid, tempfile, os, shutil
 
 # In‑memory progress tracker (extraction_id -> status dict)
 extraction_progress: dict[str, dict] = {}
@@ -247,11 +205,9 @@ def get_entity(name: str):
 @router.get("/upload")
 def upload_page():
     """返回上传页面（index.html 已挂载在 /static，直接返回对应文件）"""
-    import os
-
     cur_dir = os.path.dirname(__file__)
     path = os.path.abspath(os.path.join(cur_dir, "..", "frontend", "upload.html"))
-    from fastapi.responses import FileResponse
+    return FileResponse(path)
 
     return FileResponse(path)
 
@@ -262,9 +218,6 @@ def upload_page():
 @router.get("/entity_page")
 def entity_page(name: Optional[str] = None):
     """返回实体详情页面（通过查询参数 `name`）"""
-    import os
-    from fastapi.responses import FileResponse
-
     # 如果没有提供 name，直接返回页面（页面内部会提示缺失）
     cur_dir = os.path.dirname(__file__)
     path = os.path.abspath(os.path.join(cur_dir, "..", "frontend", "entity.html"))
@@ -274,9 +227,6 @@ def entity_page(name: Optional[str] = None):
 # ----------------------------------------------------------
 # Simple full‑text search UI endpoint
 # ----------------------------------------------------------
-from ..graph.neo4j_client import Neo4jClient
-from fastapi.responses import FileResponse
-import os
 
 
 @router.get("/search")
@@ -327,22 +277,18 @@ def get_extraction_endpoint(eid: str):
 # ----------------------------------------------------------
 @router.get("/extractions_page")
 def extractions_page():
-    import os
-
     cur_dir = os.path.dirname(__file__)
     path = os.path.abspath(os.path.join(cur_dir, "..", "frontend", "extractions.html"))
-    from fastapi.responses import FileResponse
+    return FileResponse(path)
 
     return FileResponse(path)
 
 
 @router.get("/graph_view")
 def graph_view_page():
-    import os
-
     cur_dir = os.path.dirname(__file__)
     path = os.path.abspath(os.path.join(cur_dir, "..", "frontend", "graph_view.html"))
-    from fastapi.responses import FileResponse
+    return FileResponse(path)
 
     return FileResponse(path)
 
@@ -379,16 +325,12 @@ def create_kg_endpoint(payload: Dict[str, Any]):
 @router.get("/kg_page")
 def kg_page():
     """返回知识图谱列表页面。"""
-    import os
-    from fastapi.responses import FileResponse
-
     cur_dir = os.path.dirname(__file__)
     path = os.path.abspath(os.path.join(cur_dir, "..", "frontend", "kg.html"))
     return FileResponse(path)
 
 
 # 新增 /kg 重定向，使 http://localhost:8005/kg 能正确打开 KG 列表页面
-from fastapi.responses import RedirectResponse
 
 
 @router.get("/kg")
@@ -399,9 +341,6 @@ def kg_redirect():
 @router.get("/kg_detail")
 def kg_detail_page():
     """返回 KG 详情页面（禁用缓存）。"""
-    import os
-    from fastapi.responses import FileResponse
-    from fastapi import Response
 
     cur_dir = os.path.dirname(__file__)
     path = os.path.abspath(os.path.join(cur_dir, "..", "frontend", "kg_detail.html"))
@@ -521,11 +460,9 @@ from fastapi import Request
 @router.get("/chat")
 def chat_page():
     """Serve the chat UI page."""
-    import os
-
     cur_dir = os.path.dirname(__file__)
     path = os.path.abspath(os.path.join(cur_dir, "..", "frontend", "chat.html"))
-    from fastapi.responses import FileResponse
+    return FileResponse(path)
 
     return FileResponse(path)
 
@@ -546,10 +483,8 @@ async def chat_message(request: Request):
 @router.get("/graph")
 def graph_page():
     """Serve a simple graph visualization page."""
-    import os
-
     cur_dir = os.path.dirname(__file__)
     path = os.path.abspath(os.path.join(cur_dir, "..", "frontend", "graph.html"))
-    from fastapi.responses import FileResponse
+    return FileResponse(path)
 
     return FileResponse(path)

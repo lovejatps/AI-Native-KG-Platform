@@ -30,6 +30,7 @@ result = llm.chat_vllm_direct([{"role":"user","content":"请返回 JSON {\"text\
 
 import os
 import time
+import json
 
 # Optional provider imports – they may be missing in the execution environment.
 try:
@@ -54,6 +55,19 @@ class LLM:
     *VLLM* 使用 OpenAI 1.x SDK 的 `OpenAI` 客户端，
     通过 ``base_url`` 指向 NVIDIA NIM 端点。
     """
+
+    def _parse_response(self, json_resp: str) -> dict:
+        """Parse a JSON string response from the LLM.
+
+        Returns the parsed dictionary, or an empty dict on failure.
+        """
+        try:
+            return json.loads(json_resp)
+        except Exception as e:
+            _logger.warning(
+                f"LLM JSON parse failed: {e}. Raw response: {json_resp[:200]}"
+            )
+            return {}
 
     def __init__(
         self,

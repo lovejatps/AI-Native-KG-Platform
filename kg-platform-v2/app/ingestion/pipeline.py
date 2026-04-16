@@ -28,6 +28,26 @@ from ..core.incremental import is_chunk_processed, mark_chunk_processed, _hash_t
 _logger = get_logger(__name__)
 
 
+def enrich_entities_from_relations(kg: dict) -> dict:
+    """Ensure every entity referenced in relations appears in ``kg['entities']``.
+
+    If a name is missing, a placeholder entity with ``type='Unknown'`` and empty
+    ``properties`` is added. Returns the enriched ``kg`` dict.
+    """
+    if not kg:
+        return kg
+    existing_names = {e.get("name") for e in kg.get("entities", [])}
+    for rel in kg.get("relations", []):
+        for key in ("from", "source", "to", "target"):
+            name = rel.get(key)
+            if name and name not in existing_names:
+                kg.setdefault("entities", []).append(
+                    {"name": name, "type": "Unknown", "properties": {}}
+                )
+                existing_names.add(name)
+    return kg
+
+
 def _process_chunk(chunk: str, store: VectorStore, chunk_id: str) -> None:
     """Process a single chunk: embed, store vector, extract KG, upsert graph.
     ``chunk_id`` is a deterministic hash used for logging.
@@ -41,6 +61,7 @@ def _process_chunk(chunk: str, store: VectorStore, chunk_id: str) -> None:
 
     # 2️⃣ Extract KG from the chunk
     kg = extract_kg(chunk)
+    kg = enrich_entities_from_relations(kg)
     if not kg or not kg.get("entities"):
         _logger.info(f"No KG entities extracted from chunk {chunk_id[:8]}.")
         return
