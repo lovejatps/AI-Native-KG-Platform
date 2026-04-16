@@ -16,6 +16,10 @@
         .tab button.active {border-bottom: 2px solid #4A90E2; font-weight: bold;}
         .tabcontent {display: none; padding: 1rem 0;}
         .tabcontent.active {display: block;}
+        /* Clickable rows style */
+        .clickable {cursor: pointer;}
+        /* Attribute count blue style */
+        .attr-count {color: #1E90FF; cursor: pointer;}
     </style>
 </head>
 <body>
@@ -59,6 +63,15 @@
             <tbody></tbody>
         </table>
     </div>
+
+    <!-- Modal for attribute details -->
+    <div id="attrModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;">
+        <div class="modal-content" style="background:#fff; margin:5% auto; padding:20px; width:80%; max-height:70%; overflow:auto; border-radius:4px;">
+            <h3>属性详情</h3>
+            <pre id="attrContent" style="white-space: pre-wrap; word-wrap: break-word; background:#f9f9f9; padding:10px; border:1px solid #ddd;"></pre>
+            <button id="closeModalBtn" style="margin-top:10px;">关闭</button>
+        </div>
+    </div>
     <script>
         async function loadKG(){
             const params = new URLSearchParams(window.location.search);
@@ -98,7 +111,13 @@
                 const type = node.properties?.type || '';
                 idToName[node.id] = name;
                 const tr=document.createElement('tr');
-                tr.innerHTML=`<td>${idx+1}</td><td>${name}</td><td>${attrCount}</td><td>${type}</td>`;
+                tr.classList.add('clickable');
+                tr.innerHTML=`<td>${idx+1}</td><td>${name}</td><td class="attr-count">${attrCount}</td><td>${type}</td>`;
+                // Store full properties for modal display
+                tr.dataset.props = JSON.stringify(node.properties || {});
+                tr.addEventListener('click', () => {
+                    showAttributes(tr.dataset.props);
+                });
                 objBody.appendChild(tr);
             });
             // Populate relationships tab
@@ -133,6 +152,20 @@
             const resp = await fetch(`/kg/${kgId}`, {method:'DELETE'});
             if(resp.ok){window.location.href='/kg_page';} else {alert('删除失败');}
         }
+        // Attribute modal functions
+        function showAttributes(propsJson){
+            const contentEl = document.getElementById('attrContent');
+            try {
+                const obj = JSON.parse(propsJson);
+                contentEl.textContent = JSON.stringify(obj, null, 2);
+            } catch(e){
+                contentEl.textContent = propsJson;
+            }
+            document.getElementById('attrModal').style.display = 'block';
+        }
+        document.getElementById('closeModalBtn').addEventListener('click', () => {
+            document.getElementById('attrModal').style.display = 'none';
+        });
         // Tab switching
         document.querySelectorAll('.tablink').forEach(btn=>{
             btn.addEventListener('click',()=>{
