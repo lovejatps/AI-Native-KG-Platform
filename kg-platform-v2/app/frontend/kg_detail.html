@@ -26,6 +26,7 @@
     <h1>知识图谱详情</h1>
     <div id="kgInfo"></div>
     <div class="actions">
+        <button id="exportBtn">导出</button>
         <button id="editBtn">编辑</button>
         <button id="deleteBtn">删除</button>
     </div>
@@ -145,6 +146,25 @@
             const resp = await fetch(`/kg/${kgId}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
             if(resp.ok){await loadKG();} else {alert('编辑失败');}
         }
+
+        async function exportKG(){
+            const params = new URLSearchParams(window.location.search);
+            const kgId = params.get('kg_id');
+            if(!kgId){alert('缺少 KG ID');return;}
+            const resp = await fetch(`/kg/${kgId}`);
+            if(!resp.ok){alert('获取 KG 数据失败');return;}
+            const data = await resp.json();
+            const jsonStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonStr], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `kg_${kgId}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
         async function deleteKG(){
             if(!confirm('确认删除此知识图谱吗？此操作不可恢复。')) return;
             const params = new URLSearchParams(window.location.search);
@@ -178,6 +198,7 @@
                 document.getElementById(target).classList.add('active');
             });
         });
+        document.getElementById('exportBtn').addEventListener('click', exportKG);
         document.getElementById('editBtn').addEventListener('click', editKG);
         document.getElementById('deleteBtn').addEventListener('click', deleteKG);
         loadKG();

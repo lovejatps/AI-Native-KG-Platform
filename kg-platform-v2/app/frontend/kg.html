@@ -49,6 +49,7 @@
                     <td>${kg.description || ''}</td>
                     <td class="actions">
                         <button onclick="viewKG('${kg.id}', event)">查看</button>
+                        <button onclick="exportKG('${kg.id}')">导出</button>
                         <button onclick="importDocs('${kg.id}')">导入文档</button>
                     </td>
                 `;
@@ -67,6 +68,23 @@
         function importDocs(id){
             // 跳转到上传页面，传递 kg_id
             window.location.href = `/upload?kg_id=${id}`;
+        }
+
+        async function exportKG(id){
+            if(!id){alert('缺少 KG ID');return;}
+            const resp = await fetch(`/kg/${id}`);
+            if(!resp.ok){alert('获取 KG 数据失败');return;}
+            const data = await resp.json();
+            const jsonStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonStr], {type:'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `kg_${id}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
         async function addKG(){
             const name = prompt('请输入知识图谱名称（必填）');
