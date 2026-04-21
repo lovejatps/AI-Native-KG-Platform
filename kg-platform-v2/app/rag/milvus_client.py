@@ -21,6 +21,9 @@ from ..core.milvus_config import load_milvus_config
 
 
 class MilvusClient:
+    # Shared in‑memory fallback store across all instances
+    _fallback_store = {}
+
     def __init__(
         self, host: str = None, port: int = None, collection_name: str = "kg_vectors"
     ):
@@ -43,16 +46,16 @@ class MilvusClient:
         # Determine if Milvus library is available
         self._fallback = False
         if any(v is None for v in (connections, utility, Collection)):
-            # Use simple in‑memory dict as fallback store
+            # Use simple in‑memory dict as fallback store (shared)
             self._fallback = True
-            self._store = {}
+            self._store = MilvusClient._fallback_store
             return
         # Establish connection (idempotent)
         try:
             connections.connect("default", host=self.host, port=self.port)
         except Exception:
             self._fallback = True
-            self._store = {}
+            self._store = MilvusClient._fallback_store
             return
         # Ensure collection exists
         if not utility.has_collection(self.collection_name):

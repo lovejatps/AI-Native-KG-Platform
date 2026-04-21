@@ -1,0 +1,326 @@
+[
+  {
+    "id": "462d9022ea524c7bbc1dd6354272899d",
+    "kg_id": "1890b7f4-9b87-4993-8a7b-ddaa102230e4",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student",
+      "teacher"
+    ]
+  },
+  {
+    "id": "b6ccc5d9d2984722983ad7cb80acba59",
+    "kg_id": "21d36a28-6d58-4987-a0b9-29e9702401fd",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student",
+      "teacher"
+    ]
+  },
+  {
+    "id": "f9b5a76c731a494a9d277aab92c41ab2",
+    "kg_id": "d1a8de26-d29f-44a9-b90c-638dc8127650",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student",
+      "teacher"
+    ]
+  },
+  {
+    "id": "7048b83c434c41c3aa26fd03aa45012b",
+    "kg_id": "bf6c57fa-1694-4c38-8e6e-b669d25c168a",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student",
+      "subject",
+      "subject_scores",
+      "teacher"
+    ]
+  },
+  {
+    "id": "7e3a17904db740bb9c4b3c189ec311d3",
+    "kg_id": "5ca2fae2-2023-426a-a58d-dd7873d7d57d",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student",
+      "subject",
+      "subject_scores",
+      "teacher"
+    ]
+  },
+  {
+    "id": "44fdca0754014d24a673689e50fcf35f",
+    "kg_id": "7ced6e71-8036-4c8c-85dc-35fc4340a138",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade"
+    ]
+  },
+  {
+    "id": "f024714562e44b4585c71a99e5f63244",
+    "kg_id": "1b1bc8e7-3eac-4ee0-97f2-2292a94f97a9",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade"
+    ]
+  },
+  {
+    "id": "b904f47f5c4f4105b9c79acbbc6fd27c",
+    "kg_id": "6b10bd0c-0477-4325-b512-42e11ee2aed2",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade"
+    ]
+  },
+  {
+    "id": "6d27d035f2154445beffe76521fff047",
+    "kg_id": "e98ee821-c657-4d1a-b476-a28ce7ae4b22",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade"
+    ]
+  },
+  {
+    "id": "a2a02e74f0c843f99a296fca5863245c",
+    "kg_id": "8bd56db8-8873-427a-bb8d-9bede060a672",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade"
+    ]
+  },
+  {
+    "id": "e5e1c787085a4f829632decc840864d5",
+    "kg_id": "8bd56db8-8873-427a-bb8d-9bede060a672",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade"
+    ]
+  },
+  {
+    "id": "e41e7be4ef484d64a6618765be1d8008",
+    "kg_id": "0a9c97aa-1a1d-496d-9ac5-ffcf983f0f01",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "grade",
+      "student"
+    ]
+  },
+  {
+    "id": "ca67188d8178489e9e9233127c8e29b1",
+    "kg_id": "09e6c90f-62c6-4ffb-89cd-0d3e3c18a2bf",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student"
+    ]
+  },
+  {
+    "id": "b1d832afa69c42fdad07a0da91ce3809",
+    "kg_id": "b339d53b-0f6a-4868-b118-7249028496f2",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade"
+    ]
+  },
+  {
+    "id": "6574d27650c244949e3e9ea542af0d2a",
+    "kg_id": "e60a608b-bfa3-4d06-bd3c-1f4b53789713",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class"
+    ]
+  },
+  {
+    "id": "cd99955242e64b27970064e2f0db7612",
+    "kg_id": "e60a608b-bfa3-4d06-bd3c-1f4b53789713",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student",
+      "subject",
+      "subject_scores",
+      "teacher"
+    ]
+  },
+  {
+    "id": "d58c8116653f41589dab7a144570d0c4",
+    "kg_id": "f9bca25f-9cbb-4389-8e9f-ef4dec6d447e",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class"
+    ]
+  },
+  {
+    "id": "8706f76485374e6782f2ea03e56a8a19",
+    "kg_id": "f9bca25f-9cbb-4389-8e9f-ef4dec6d447e",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student",
+      "subject",
+      "subject_scores",
+      "teacher"
+    ]
+  },
+  {
+    "id": "2e12e06c681f4b4c8be1fff4b5dee3cd",
+    "kg_id": "2656624c-0bf4-4252-bc36-97c34971c202",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student"
+    ]
+  },
+  {
+    "id": "134d3ea83e0d4175a12268dd8d92aa5f",
+    "kg_id": "3b92c556-e07e-4972-b299-842f6a833ecb",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student",
+      "subject"
+    ]
+  },
+  {
+    "id": "255348696bf048c7ac33172bc0fc7767",
+    "kg_id": "57d9ab1e-311d-41f4-8a42-50ffa8179c57",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student",
+      "subject",
+      "subject_scores",
+      "teacher"
+    ]
+  },
+  {
+    "id": "a187420c751444319e9d9e2908bf1164",
+    "kg_id": "5878998c-6328-417e-ad47-fb6b4be8578e",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student",
+      "subject",
+      "subject_scores",
+      "teacher"
+    ]
+  },
+  {
+    "id": "b8b6a405dbda46ffb31afe695328bc0f",
+    "kg_id": "2c771e71-8dde-4c30-9e4f-9c3ff64533f6",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade"
+    ]
+  },
+  {
+    "id": "d0888c5ae7134449814102a0e3c589b3",
+    "kg_id": "a00bad9e-dcce-45df-847b-b296cf559856",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade"
+    ]
+  },
+  {
+    "id": "4f96f26163e84b8198d48b596f802364",
+    "kg_id": "a37b0419-2a4d-4b92-b012-b90129676513",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade"
+    ]
+  },
+  {
+    "id": "baf4c7431255440f854592f28cb1d8e0",
+    "kg_id": "dfeedc09-4618-4602-807e-939d5ad3d966",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade"
+    ]
+  },
+  {
+    "id": "86747d489dcc4e729f2b38dfb3bd790d",
+    "kg_id": "263fd2f0-ca33-4f36-ab0b-1d39d475d361",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student"
+    ]
+  },
+  {
+    "id": "9baa026c37d1424e9515479af63f3abe",
+    "kg_id": "b947e285-3b16-406f-aae7-ae32fbbf67dc",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student"
+    ]
+  },
+  {
+    "id": "1361addb87144bb88f9949626b5359bd",
+    "kg_id": "6dbcfd22-54d4-4af2-892b-b76015441d4f",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student"
+    ]
+  },
+  {
+    "id": "0f917a4cdf364861adbacf40bb3d0600",
+    "kg_id": "d47c0087-8e1f-4c7e-a7e1-683ea26fb11c",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade"
+    ]
+  },
+  {
+    "id": "1620b3c1ddda47fd8a3d1736a1484a10",
+    "kg_id": "fa5fb730-de4e-4ac3-870f-d62968ff8cb8",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade"
+    ]
+  },
+  {
+    "id": "e588fc961c1b494ba2cb51f6cf03be95",
+    "kg_id": "333c2ff1-a2c1-43d7-8f0b-6c5e942795c9",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student"
+    ]
+  }
+]

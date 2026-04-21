@@ -1,0 +1,247 @@
+[
+  {
+    "id": "5e49771681134f8199aa9b8c0b55fd29",
+    "kg_id": "6206b729-c0d1-45e8-87d0-ac221304b326",
+    "version": "v1.0.0",
+    "created_at": "2026-04-20T03:19:29.766086",
+    "status": "草稿",
+    "schema": {
+      "entities": [],
+      "relations": [],
+      "relationships": []
+    }
+  },
+  {
+    "id": "465aed298de14f6c821d30a94fe41bb6",
+    "kg_id": "e98ee821-c657-4d1a-b476-a28ce7ae4b22",
+    "version": "v1.0.1",
+    "created_at": "2026-04-20T03:19:50.996949",
+    "status": "草稿",
+    "schema": {
+      "entities": [
+        {
+          "name": "Person",
+          "properties": []
+        }
+      ],
+      "relations": []
+    },
+    "updated_at": "2026-04-20T03:19:50.999830"
+  },
+  {
+    "id": "1f67607d812e4e908894f63b6b8a9685",
+    "kg_id": "7b1a2a8d-d490-42df-b4a5-3cacb95fdd11",
+    "version": "v1.0.0",
+    "created_at": "2026-04-20T03:19:51.031636",
+    "status": "草稿",
+    "schema": {
+      "entities": []
+    }
+  },
+  {
+    "id": "851958c459ea45cf8d5b189a23db4ae1",
+    "kg_id": "e98ee821-c657-4d1a-b476-a28ce7ae4b22",
+    "version": "v1.0.3",
+    "created_at": "2026-04-20T04:01:07.710508",
+    "status": "草稿",
+    "schema": {
+      "entities": [
+        {
+          "name": "Class",
+          "properties": [
+            {
+              "name": "id",
+              "type": "string",
+              "source_column": "id"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "source_column": "name"
+            },
+            {
+              "name": "grade_id",
+              "type": "string",
+              "source_column": "grade_id"
+            }
+          ]
+        },
+        {
+          "name": "Grade",
+          "properties": [
+            {
+              "name": "id",
+              "type": "string",
+              "source_column": "id"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "source_column": "name"
+            }
+          ]
+        }
+      ],
+      "relations": [
+        {
+          "source": "Class",
+          "target": "Grade",
+          "type": "FK"
+        }
+      ]
+    },
+    "updated_at": "2026-04-20T04:01:20.712603"
+  },
+  {
+    "id": "ad4de1b54a2b434cbd313d5bb8511ce3",
+    "kg_id": "8777d07f-375c-4c4f-910e-160745b2387d",
+    "version": "v1.0.1",
+    "created_at": "2026-04-20T04:05:04.716196",
+    "status": "草稿",
+    "schema": {
+      "entities": [
+        {
+          "name": "Person",
+          "properties": []
+        }
+      ],
+      "relations": [],
+      "relationships": []
+    },
+    "updated_at": "2026-04-20T04:05:04.719830"
+  },
+  {
+    "id": "81232f0708e24356a8b8e911b71e97dd",
+    "kg_id": "4893b08d-5116-4331-9c64-c658f0e8ada9",
+    "version": "v1.0.0",
+    "created_at": "2026-04-20T04:05:04.911141",
+    "status": "草稿",
+    "schema": {
+      "entities": []
+    }
+  },
+  {
+    "id": "c00d22280d764b9b8eff7fcf810acec1",
+    "kg_id": "e98ee821-c657-4d1a-b476-a28ce7ae4b22",
+    "version": "v1.0.5",
+    "created_at": "2026-04-20T04:06:03.491860",
+    "status": "草稿",
+    "schema": {
+      "entities": [
+        {
+          "name": "Class",
+          "properties": [
+            {
+              "name": "id",
+              "type": "string",
+              "source_column": "id"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "source_column": "name"
+            },
+            {
+              "name": "grade_id",
+              "type": "string",
+              "source_column": "grade_id"
+            }
+          ]
+        },
+        {
+          "name": "Grade",
+          "properties": [
+            {
+              "name": "id",
+              "type": "string",
+              "source_column": "id"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "source_column": "name"
+            }
+          ]
+        }
+      ],
+      "relations": [
+        {
+          "source": "Class",
+          "target": "Grade",
+          "type": "FK"
+        }
+      ],
+      "relationships": [
+        {
+          "source": "class",
+          "target": "grade",
+          "type": "FK",
+          "property": "grade_id"
+        }
+      ]
+    },
+    "updated_at": "2026-04-20T04:06:30.392979"
+  },
+  {
+    "id": "20bab0a945394fc3a384822edd118bbd",
+    "kg_id": "8bd56db8-8873-427a-bb8d-9bede060a672",
+    "version": "v1.0.1",
+    "created_at": "2026-04-20T05:26:18.224915",
+    "status": "草稿",
+    "schema": {
+      "entities": [
+        {
+          "name": "Class",
+          "properties": [
+            {
+              "name": "id",
+              "type": "string",
+              "source_column": "id"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "source_column": "name"
+            },
+            {
+              "name": "grade_id",
+              "type": "string",
+              "source_column": "grade_id"
+            }
+          ]
+        },
+        {
+          "name": "Grade",
+          "properties": [
+            {
+              "name": "id",
+              "type": "string",
+              "source_column": "id"
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "source_column": "name"
+            }
+          ]
+        }
+      ],
+      "relations": [
+        {
+          "source": "Class",
+          "target": "Grade",
+          "type": "FK"
+        }
+      ],
+      "relationships": [
+        {
+          "source": "class",
+          "target": "grade",
+          "type": "FK",
+          "property": "grade_id"
+        }
+      ]
+    },
+    "updated_at": "2026-04-20T05:26:26.866326"
+  }
+]

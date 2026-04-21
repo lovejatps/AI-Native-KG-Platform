@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>数据源管理</title>
+    <style>
+        body {font-family: Arial, sans-serif; margin: 2rem;}
+        table {border-collapse: collapse; width: 100%; margin-top: 1rem;}
+        th, td {border: 1px solid #ddd; padding: 8px; text-align: left;}
+        th {background: #f0f0f0;}
+        .actions button {margin-right: 5px;}
+        .top-bar {display: flex; justify-content: space-between; align-items: center;}
+        .modal {display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000;}
+        .modal-content {background:#fff; margin:5% auto; padding:20px; width:400px; border-radius:4px;}
+        label {display:block; margin-top:10px;}
+        input, select {width:100%; padding:5px;}
+    </style>
+    <script>
+        async function loadDataSources(){
+            const resp = await fetch('/datasources');
+            const data = await resp.json();
+            const tbody = document.querySelector('#dsTable tbody');
+            tbody.innerHTML='';
+            data.datasources.forEach((ds, idx)=>{
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${idx+1}</td>
+<td>${ds.system_name}</td>
+                  <td>${ds.database || ''}</td>
+                  <td>${ds.db_type}</td>
+<td>${ds.host}</td>
+    <td>${ds.status || '未知'}</td>
+    <td class="actions">
+                        <button onclick="editDS('${ds.id}')">编辑</button>
+                        <button onclick="deleteDS('${ds.id}')">删除</button>
+                        <button onclick="testDS('${ds.id}')">测试</button>
+                        <button onclick="viewSchema('${ds.id}')">查看数据库结构</button>
+                    </td>`;
+                tbody.appendChild(tr);
+            });
+        }
+        function openModal(){ document.getElementById('dsModal').style.display='block'; }
+        function closeModal(){ document.getElementById('dsModal').style.display='none'; }
+        async function submitDS(event){
+            event.preventDefault();
+            const form = event.target;
+            const payload = {
+                system_name: form.system_name.value.trim(),
+                db_type: form.db_type.value,
+                host: form.host.value.trim(),
+                port: form.port.value ? parseInt(form.port.value) : null,
+                username: form.username.value.trim()||null,
+                password: form.password.value.trim()||null,
+                database: form.database.value.trim()||null,
+            };
+            const method = form.dataset.method;
+            const url = form.dataset.url;
+            const resp = await fetch(url, {
+                method,
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if(resp.ok){
+                closeModal();
+                loadDataSources();
+            } else { alert('操作失败'); }
+        }
+        async function editDS(dsId){
+            // fetch existing data
+            const resp = await fetch('/datasources');
+            const data = await resp.json();
+            const ds = data.datasources.find(d=>d.id===dsId);
+            if(!ds) return;
+            const form = document.getElementById('dsForm');
+            form.system_name.value = ds.system_name;
+            form.db_type.value = ds.db_type;
+            form.host.value = ds.host;
+            form.port.value = ds.port || '';
+            form.username.value = ds.username || '';
+            form.password.value = ds.password || '';
+            form.database.value = ds.database || '';
+            form.dataset.method = 'PUT';
+            form.dataset.url = `/datasources/${dsId}`;
+            openModal();
+        }
+        async function deleteDS(dsId){
+            if(!confirm('确认删除此数据源？')) return;
+            const resp = await fetch(`/datasources/${dsId}`, {method:'DELETE'});
+            if(resp.ok) loadDataSources(); else alert('删除失败');
+        }
+
+        async function testDS(dsId){
+            // 调用后端测试接口，更新状态后重新加载列表
+            const resp = await fetch(`/datasources/${dsId}/test`, {method:'POST'});
+            if(resp.ok){
+                const result = await resp.json();
+                console.log('测试结果', result);
+                loadDataSources();
+            } else {
+                alert('测试失败');
+            }
+        }
+
+        function viewSchema(dsId){
+            // 打开数据库结构页面（传递 dsId）
+            window.location.href = `/datasource_schema_page?ds_id=${dsId}`;
+        }
+        document.addEventListener('DOMContentLoaded',()=>{
+            loadDataSources();
+            const form = document.getElementById('dsForm');
+            form.addEventListener('submit', submitDS);
+            // set create defaults
+            form.dataset.method='POST';
+            form.dataset.url='/datasources';
+        });
+    </script>
+</head>
+<body>
+    <h1>数据源管理</h1>
+    <div class="top-bar">
+        <div></div>
+        <button onclick="openModal()">新增数据源</button>
+    </div>
+    <table id="dsTable">
+        <thead>
+            <tr><th>序号</th><th>系统名称</th><th>库名</th><th>库类型</th><th>主机/路径</th><th>状态</th><th>操作</th></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <!-- Modal -->
+    <div id="dsModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">数据源</h3>
+            <form id="dsForm" data-method="POST" data-url="/datasources">
+                <label>系统名称<input type="text" name="system_name" required/></label>
+                <label>库类型<select name="db_type"><option value="mysql">mysql</option><option value="sqlite">sqlite</option></select></label>
+                <label>主机名/IP/路径<input type="text" name="host" required/></label>
+                <label>端口<input type="number" name="port"/></label>
+                <label>用户名<input type="text" name="username"/></label>
+                <label>密码<input type="password" name="password"/></label>
+                <label>数据库名<input type="text" name="database"/></label>
+                <div style="margin-top:10px; text-align:right;">
+                    <button type="button" onclick="closeModal()">取消</button>
+                    <button type="submit">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

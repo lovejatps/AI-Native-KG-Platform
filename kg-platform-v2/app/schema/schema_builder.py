@@ -27,6 +27,12 @@ def build_schema(text: str):
     cached = redis_cache.get(cache_key)
     if cached:
         _logger.info(f"Schema cache hit (Redis) for hash {text_hash[:8]}")
+        # Always persist a version for the cached schema (may be missing).
+        try:
+            version = schema_cache.save_schema(cached)
+            cached["_version"] = version
+        except Exception as e:
+            _logger.error(f"Failed to persist cached schema version: {e}")
         return cached
 
     # 3️⃣ No Redis entry – generate schema via LLM
@@ -40,10 +46,9 @@ def build_schema(text: str):
     JSON格式输出
     """
     res = llm.chat(prompt)
-        schema = llm._parse_response(res)
-        if not schema:
-            schema = {"entities": ["Unknown"], "relations": [], "properties": {}}
-
+    schema = llm._parse_response(res)
+    if not schema:
+        schema = {"entities": ["Unknown"], "relations": [], "properties": {}}
 
     # 4️⃣ Persist versioned schema locally
     try:

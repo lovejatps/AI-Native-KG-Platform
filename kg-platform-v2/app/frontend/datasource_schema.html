@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>数据库结构</title>
+    <style>
+        body {font-family: Arial, sans-serif; margin: 2rem; display: flex; flex-direction: column; height: 100vh;}
+        .top-bar {display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;}
+        .content {flex: 1; display: flex; overflow: hidden;}
+        .tree {width: 30%; overflow-y: auto; border-right: 1px solid #ddd; padding-right: 1rem;}
+        .details {flex: 1; overflow-y: auto; padding-left: 1rem;}
+        .tree ul {list-style-type: none; padding-left: 1rem;}
+        .tree li {cursor: pointer; margin: 4px 0;}
+        .tree li:hover {color: #0066cc;}
+        table {border-collapse: collapse; width: 100%;}
+        th, td {border: 1px solid #ddd; padding: 8px; text-align: left;}
+        th {background: #f0f0f0;}
+        .header-title {font-size: 1.5em; font-weight: bold;}
+    </style>
+    <script>
+        function getQueryParam(name){
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+        async function loadSchema(){
+            const dsId = getQueryParam('ds_id');
+            if(!dsId) return alert('缺少数据源ID');
+            const resp = await fetch(`/datasources/${dsId}/schema`);
+            if(!resp.ok) return alert('获取结构失败');
+            const data = await resp.json();
+            document.getElementById('dbName').textContent = data.database || '未知库名';
+            const treeDiv = document.getElementById('tree');
+            const ul = document.createElement('ul');
+            data.tables.forEach((tbl,i)=>{
+                const li = document.createElement('li');
+                li.textContent = tbl.name;
+                li.dataset.idx = i;
+                li.onclick = () => showColumns(i);
+                ul.appendChild(li);
+            });
+            treeDiv.appendChild(ul);
+            window._tables = data.tables; // 保存全局
+        }
+        function showColumns(tableIdx){
+            const tbl = window._tables[tableIdx];
+            if(!tbl) return;
+            const tbody = document.querySelector('#colTable tbody');
+            tbody.innerHTML='';
+            tbl.columns.forEach((col, idx)=>{
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${idx+1}</td><td>${col.name}</td><td>${col.type}</td><td>${col.comment || ''}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+        function goBack(){
+            window.location.href = '/datasources_page';
+        }
+        document.addEventListener('DOMContentLoaded', loadSchema);
+    </script>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="header-title" id="dbName">数据库结构</div>
+        <button onclick="goBack()">返回</button>
+    </div>
+    <div class="content">
+        <div class="tree" id="tree"></div>
+        <div class="details">
+            <h3>表字段列表</h3>
+            <table id="colTable">
+                <thead>
+                    <tr><th>序号</th><th>字段</th><th>类型</th><th>备注</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>模型图谱编辑</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@antv/x6@latest/dist/x6.css" />
+  <style>
+    body {font-family: Arial, sans-serif; margin:0; height:100vh; display:flex; flex-direction:column;}
+    .toolbar {padding:8px; background:#f5f5f5; display:flex; gap:8px;}
+    #graphContainer {flex:1; background:#fff;}
+    .modal {display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); overflow:auto;}
+    .modal-content {background:#fff; margin:5% auto; padding:20px; width:90%; max-width:500px; border-radius:4px;}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@antv/x6@latest/dist/x6.min.js"></script>
+</head>
+<body>
+  <!-- 顶部栏（关键控制区） -->
+  <div style="padding:8px; background:#f5f5f5; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd;">
+    <div>数据源：<span id="dataSourceInfo">车队系统</span> | Schema版本：<span id="schemaVersionInfo">v1.2</span></div>
+    <div>
+      <button onclick="saveGraph()">保存</button>
+      <button onclick="publishModel()">发布</button>
+      <button onclick="rollbackModel()">回滚</button>
+    </div>
+  </div>
+
+  <div class="toolbar" style="padding:8px; background:#fafafa; border-bottom:1px solid #ddd;">
+    <button onclick="addNode()">+ 实体</button>
+    <button onclick="createEntity()">+ 新建实体</button>
+    <button onclick="addEdge()">+ 关系</button>
+    <button onclick="closeEditor()">关闭</button>
+  </div>
+
+  <div style="display:flex; height:calc(100% - 80px);">
+    <!-- 左侧实体列表（Entity Panel） -->
+    <div id="entityPanel" style="width:200px; border-right:1px solid #ddd; padding:8px; overflow:auto;">
+      <h3>实体列表</h3>
+      
+      <ul id="entityList" style="list-style:none; padding:0; margin-top:8px;">
+        <!-- 动态填充 -->
+      </ul>
+    </div>
+    <!-- 中间图谱编辑区（核心） -->
+    <div id="graphContainer" style="flex:1; position:relative; background:#fafafa;">
+    </div>
+    <!-- 右侧属性编辑面板（Property Panel） -->
+    <div id="propertyPanel" style="width:250px; border-left:1px solid #ddd; padding:8px; overflow:auto; display:none;">
+      <h3>属性编辑</h3>
+      <div id="propContent"></div>
+      <button style="margin-top:8px;" onclick="addProperty()">+ 新增属性</button>
+    </div>
+  </div>
+
+  <!-- 底部 Diff & 日志 -->
+  <div style="padding:8px; background:#f9f9f9; border-top:1px solid #ddd; height:120px; overflow:auto;">
+    <h4>Diff & 日志</h4>
+    <pre id="diffPanel" style="margin:0; white-space:pre-wrap; word-break:break-all;">暂无变更</pre>
+  </div>
+
+  <script>
+    // ---------------------------------------------------------------
+    // 读取 URL 参数 (kg_id, model_id)
+    // ---------------------------------------------------------------
+    const params = new URLSearchParams(window.location.search);
+    const kgId = params.get('kg_id');
+    const modelId = params.get('model_id');
+    if (!kgId || !modelId) {
+      alert('缺少必要的参数');
+    }
+
+    // ---------------------------------------------------------------
+    // 初始化 X6 Graph
+    // ---------------------------------------------------------------
+    const { Graph } = X6;
+    const graph = new Graph({
+      container: document.getElementById('graphContainer'),
+      grid: true,
+      connecting: {
+        router: 'manhattan',
+        connector: 'rounded',
+        anchor: 'center',
+        connectionPoint: 'anchor',
+        allowBlank: false,
+        snap: true,
+      },
+      interacting: { nodeMovable: true, edgeMovable: true },
+    });
+
+
+
+    // ---------------------------------------------------------------
+    // UI 操作：新增实体、关系
+    // ---------------------------------------------------------------
+    function addNode() {
+      const name = prompt('请输入实体名称');
+      if (!name) return;
+      const cnt = graph.getNodes().length;
+      graph.addNode({
+        x: 50 + (cnt % 4) * 200,
+        y: 50 + Math.floor(cnt / 4) * 150,
+        width: 150,
+        height: 80,
+        label: name,
+        attrs: { body: { stroke: '#5F95FF', fill: '#EFF4FF' } },
+      });
+    }
+
+    function addEdge() {
+      const src = prompt('来源实体名称');
+      const tgt = prompt('目标实体名称');
+      const type = prompt('关系类型（标签）');
+      if (!src || !tgt || !type) return;
+      const srcNode = graph.getNodes().find(n => n.getLabel() === src);
+      const tgtNode = graph.getNodes().find(n => n.getLabel() === tgt);
+      if (!srcNode || !tgtNode) {
+        alert('未找到对应的实体节点');
+        return;
+      }
+      graph.addEdge({
+        source: srcNode,
+        target: tgtNode,
+        labels: [{ attrs: { label: { text: type } } }],
+      });
+    }
+
+function closeEditor() {
+      window.close();
+    }
+
+    // ---------------------------------------------------------------
+    // ---------- 实体/属性面板相关数据结构 & 方法 -------------------
+    // ---------------------------------------------------------------
+    let originalSchema = null;   // 用于 diff 计算
+    let entityProps = {};          // {entityName: [{origField, semantic, type, visible}] 
+    let currentEntity = null;     // 当前选中的实体名称
+
+    // 从后端加载的 schema 同时初始化属性映射并渲染实体列表
+    function initFromSchema(schema) {
+      originalSchema = JSON.parse(JSON.stringify(schema)); // 深拷贝留作 diff
+      const entities = schema.entities || [];
+      const relations = schema.relations || [];
+
+      // 初始化属性映射
+      entityProps = {};
+      entities.forEach(e => {
+        // 默认把后端的属性映射为 semantic 与原始相同，type 暂定为 string，默认展示
+        const props = (e.properties || []).map(p => ({
+          // Use the source column as the original field if provided, otherwise fall back to the displayed name
+          origField: p.source_column || p.name,
+          // The displayed (semantic) name is always the 'name' field in the schema
+          semantic: p.name,
+          type: p.type || 'string',
+          visible: true,
+        }));
+        entityProps[e.name] = props;
+      });
+      renderEntityList();
+    }
+
+    // 渲染左侧实体列表
+    function renderEntityList() {
+      const ul = document.getElementById('entityList');
+      ul.innerHTML = '';
+      Object.keys(entityProps).forEach(name => {
+const li = document.createElement('li');
+          li.style.cursor = 'pointer';
+          li.style.padding = '4px 0';
+          li.textContent = name;
+          li.draggable = false; // Prevent default drag behavior
+          li.onclick = () => selectEntityFromList(name);
+          ul.appendChild(li);
+      });
+    }
+
+    // 创建新实体（同时在 graph 中创建节点）
+    function createEntity() {
+      const name = prompt('请输入实体名称');
+      if (!name) return;
+      // 防止重复
+      if (entityProps[name]) { alert('实体已存在'); return; }
+      // 在图谱中添加节点（默认位置在左上）
+      const cnt = graph.getNodes().length;
+      const node = graph.addNode({
+        x: 50 + (cnt % 4) * 200,
+        y: 50 + Math.floor(cnt / 4) * 150,
+        width: 150,
+        height: 80,
+        label: name,
+        attrs: { body: { stroke: '#5F95FF', fill: '#EFF4FF' } },
+      });
+      // 初始化空属性
+      entityProps[name] = [];
+      renderEntityList();
+    }
+
+    // 通过左侧列表点击选中实体并在画布上高亮
+    function selectEntityFromList(name) {
+      const node = graph.getNodes().find(n => n.getLabel() === name);
+      if (node) {
+        graph.centerContent();
+        graph.select(node);
+        showPropertyPanel(name);
+      }
+    }
+
+    // 节点点击事件 - 打开属性面板
+    graph.on('node:click', ({ node }) => {
+      const name = node.getLabel();
+      showPropertyPanel(name);
+    });
+    // Prevent default drag-and-drop creation on graph container
+    const graphContainerElem = document.getElementById('graphContainer');
+    graphContainerElem.addEventListener('dragover', e => e.preventDefault());
+    graphContainerElem.addEventListener('drop', e => e.preventDefault());
+
+    // 显示属性编辑面板 & 渲染属性表单
+    function showPropertyPanel(name) {
+      currentEntity = name;
+      const panel = document.getElementById('propertyPanel');
+      const container = document.getElementById('propContent');
+      panel.style.display = 'block';
+      const props = entityProps[name] || [];
+      let html = `<h4>${name}</h4>`;
+      html += `<table style="width:100%; border-collapse:collapse;">
+                <tr><th>原始字段</th><th>语义名</th><th>类型</th><th>展示</th><th>操作</th></tr>`;
+      props.forEach((p, idx) => {
+        html += `<tr data-idx="${idx}">
+                  <td><input style="width:90%;" value="${p.origField}" readonly/></td>
+                  <td><input style="width:90%;" value="${p.semantic}" onchange="updateProp('${name}', ${idx}, 'semantic', this.value)"/></td>
+                  <td><select onchange="updateProp('${name}', ${idx}, 'type', this.value)">
+                        <option value="string" ${p.type==='string'?'selected':''}>string</option>
+                        <option value="int" ${p.type==='int'?'selected':''}>int</option>
+                     </select></td>
+                  <td style="text-align:center;"><input type="checkbox" ${p.visible?'checked':''} onchange="updateProp('${name}', ${idx}, 'visible', this.checked)"/></td>
+                  <td><button onclick="removeProperty('${name}', ${idx})">🗑</button></td>
+                </tr>`;
+      });
+      html += `</table>`;
+      container.innerHTML = html;
+    }
+
+    // 更新属性对象
+    function updateProp(entity, idx, field, value) {
+      const arr = entityProps[entity];
+      if (!arr) return;
+      const prop = arr[idx];
+      if (field === 'visible') prop[field] = !!value;
+      else prop[field] = value;
+    }
+
+    // 删除属性行
+    function removeProperty(entity, idx) {
+      const arr = entityProps[entity];
+      if (!arr) return;
+      arr.splice(idx, 1);
+      showPropertyPanel(entity);
+    }
+
+    // 新增属性（空行）
+    function addProperty() {
+      if (!currentEntity) { alert('请选择实体'); return; }
+      const arr = entityProps[currentEntity];
+      arr.push({ origField: '', semantic: '', type: 'string', visible: true });
+      showPropertyPanel(currentEntity);
+    }
+
+    // ---------------------------------------------------------------
+    // 保存时使用 entityProps 而不是空属性数组，并生成 Diff
+    // ---------------------------------------------------------------
+    function generateDiff(oldSchema, newSchema) {
+      const diffLines = [];
+      const oldEnt = oldSchema.entities.map(e => e.name);
+      const newEnt = newSchema.entities.map(e => e.name);
+      // 实体新增/删除
+      newEnt.filter(e => !oldEnt.includes(e)).forEach(e => diffLines.push(`+ 新增实体：${e}`));
+      oldEnt.filter(e => !newEnt.includes(e)).forEach(e => diffLines.push(`- 删除实体：${e}`));
+      // 属性改动（仅展示新增/删除属性）
+      newSchema.entities.forEach(ne => {
+        const oe = oldSchema.entities.find(o => o.name === ne.name);
+        if (!oe) return; // 已是新增实体，已记录
+        const oldProps = (oe.properties || []).map(p => p.name);
+        const newProps = (ne.properties || []).map(p => p.name);
+        newProps.filter(p => !oldProps.includes(p)).forEach(p => diffLines.push(`+ 实体 ${ne.name} 新增属性：${p}`));
+        oldProps.filter(p => !newProps.includes(p)).forEach(p => diffLines.push(`- 实体 ${ne.name} 删除属性：${p}`));
+      });
+      // 关系变化
+      const oldRel = (oldSchema.relations || []).map(r => `${r.source}->${r.target}:${r.type}`);
+      const newRel = (newSchema.relations || []).map(r => `${r.source}->${r.target}:${r.type}`);
+      newRel.filter(r => !oldRel.includes(r)).forEach(r => diffLines.push(`+ 新增关系：${r}`));
+      oldRel.filter(r => !newRel.includes(r)).forEach(r => diffLines.push(`- 删除关系：${r}`));
+      return diffLines.join('\n') || '暂无变更';
+    }
+
+    // 重写 saveGraph，使用 entityProps 并显示 Diff
+    function saveGraph() {
+      const nodes = graph.getNodes();
+      const edges = graph.getEdges();
+      // 组装 entities
+const entities = nodes.map(node => {
+      const props = entityProps[node.getLabel()] || [];
+      // Convert internal property representation to backend schema format
+      const schemaProps = props.map(p => ({
+        // Use semantic name if provided; otherwise fall back to original field.
+        name: p.semantic || p.origField,
+        type: p.type || 'string',
+        source_column: p.origField,
+      }));
+      return {
+        name: node.getLabel(),
+        properties: schemaProps,
+      };
+    });
+// DEBUG: log edges before extracting relations
+          console.log('Saving: edges from graph', edges);
+          const relations = edges.map(edge => {
+            // Extract source/target labels with comprehensive fallback
+            let srcLabel = '';
+            let tgtLabel = '';
+            try {
+              // 1. New X6 API
+              const srcCell = edge.getSourceCell?.();
+              const tgtCell = edge.getTargetCell?.();
+              if (srcCell && typeof srcCell.getLabel === 'function') {
+                srcLabel = srcCell.getLabel();
+              } else if (edge.source && typeof edge.source.getLabel === 'function') {
+                srcLabel = edge.source.getLabel();
+              } else if (edge.source && typeof edge.source === 'string') {
+                const node = graph.getCell(edge.source);
+                if (node && typeof node.getLabel === 'function') srcLabel = node.getLabel();
+              }
+
+              if (tgtCell && typeof tgtCell.getLabel === 'function') {
+                tgtLabel = tgtCell.getLabel();
+              } else if (edge.target && typeof edge.target.getLabel === 'function') {
+                tgtLabel = edge.target.getLabel();
+              } else if (edge.target && typeof edge.target === 'string') {
+                const node = graph.getCell(edge.target);
+                if (node && typeof node.getLabel === 'function') tgtLabel = node.getLabel();
+              }
+            } catch (e) {
+              // ignore
+            }
+            return {
+              source: srcLabel,
+              target: tgtLabel,
+              type: edge.getLabels()[0]?.attrs?.label?.text || '',
+            };
+          });
+      const newSchema = { entities, relations };
+
+      // 计算 diff 并展示在底部
+      const diffText = generateDiff(originalSchema || {entities: [], relations: []}, newSchema);
+      document.getElementById('diffPanel').textContent = diffText;
+
+      console.log('Saving schema to backend', newSchema);
+      fetch(`/kg/${kgId}/models/${modelId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schema: newSchema }),
+      })
+        .then(r => {
+          if (r.ok) {
+            alert('保存成功');
+            if (window.opener && window.opener.loadModels) {
+              window.opener.loadModels();
+            }
+            // 更新 originalSchema 为最新，以便后续 diff 正确
+            originalSchema = JSON.parse(JSON.stringify(newSchema));
+          } else {
+            r.json().then(e => alert('保存失败: ' + e.error));
+          }
+        })
+        .catch(err => alert('网络错误: ' + err));
+    }
+
+    // 发布、回滚占位函数（后端未实现，先提示）
+    function publishModel() { alert('发布功能待实现'); }
+    function rollbackModel() { alert('回滚功能待实现'); }
+
+    // ---------------------------------------------------------------
+    // 初始化：加载模型后填充属性映射并渲染实体列表
+    // ---------------------------------------------------------------
+if (!window.__graphSchemaLoaded) {
+  window.__graphSchemaLoaded = true;
+  fetch(`/kg/${kgId}/models/${modelId}`)
+      .then(r => r.json())
+      .then(data => {
+        const schema = data.schema || {};
+         // 清空画布并初始化属性
+         graph.clearCells();
+         initFromSchema(schema);
+        const entities = schema.entities || [];
+        const relations = schema.relations || [];
+        const nodeMap = {};
+        // 去重实体避免重复渲染
+        const seenEntities = new Set();
+        entities.forEach((e, idx) => {
+          if (seenEntities.has(e.name)) return; // 跳过重复实体
+          seenEntities.add(e.name);
+          const node = graph.addNode({
+            x: 50 + (idx % 4) * 200,
+            y: 50 + Math.floor(idx / 4) * 150,
+            width: 150,
+            height: 80,
+            label: e.name,
+            attrs: { body: { stroke: '#5F95FF', fill: '#EFF4FF' } },
+          });
+          nodeMap[e.name.toLowerCase()] = node;
+        });
+        relations.forEach(rel => {
+          const src = nodeMap[rel.source];
+          const tgt = nodeMap[rel.target];
+          if (src && tgt) {
+            graph.addEdge({
+              source: src,
+              target: tgt,
+              labels: [{ attrs: { label: { text: rel.type } } }],
+            });
+          }
+        });
+
+      })
+        .catch(err => alert('加载模型失败: ' + err));
+    }
+
+  </script>
+</body>
+</html>

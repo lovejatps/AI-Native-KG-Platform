@@ -55,6 +55,18 @@ uvicorn app.main:app --host 0.0.0.0 --port 8005 --reload
 - 图谱查看: `http://localhost:8005/graph_view?eid=<extraction_id>`（使用 Cytoscape.js 渲染）
 
 ## 测试套件
+
+### API 文档新增章节
+
+**PUT `/kg/{kg_id}/models/{model_id}`** – 编辑模型的 Schema（仅限草稿状态）。
+- **请求体**: `{\"schema\": <JSON object>}` 必须包含 `entities` 列表，且每个实体需包含 `name` 与 `properties`。
+- **响应**: 返回更新后的模型对象（包括 `id`, `kg_id`, `version`, `status`, `schema` 等字段）。
+- **错误码**:
+  - `400` – 无效的 Schema（缺少 `entities` 或结构错误）或模型不是草稿。
+  - `404` – 指定模型或 KG 未找到。
+  - `500` – 服务器内部错误。
+
+此端点在前端编辑弹窗中被调用，实现了完整的编辑‑保存‑刷新流程。
 ```bash
 pytest -q tests/
 ```

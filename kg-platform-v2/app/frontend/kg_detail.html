@@ -23,7 +23,7 @@
     </style>
 </head>
 <body>
-    <h1>知识图谱详情</h1>
+    <h1 style="display:inline-block; margin-right:10px;">知识图谱详情</h1><button id="backBtn" style="float:right; margin-top:0.5rem;">返回</button>
     <div id="kgInfo"></div>
     <div class="actions">
         <button id="exportBtn">导出</button>
@@ -128,7 +128,7 @@
                 const srcName = idToName[rel.source] || rel.source;
                 const tgtName = idToName[rel.target] || rel.target;
                 const tr=document.createElement('tr');
-                tr.innerHTML=`<td>${idx+1}</td><td>${rel.type}</td><td>${srcName}、${tgtName}</td>`;
+                tr.innerHTML=`<td>${idx+1}</td><td>${rel.type}</td><td>${srcName} → ${tgtName}</td>`;
                 relBody.appendChild(tr);
             });
         }
@@ -185,6 +185,10 @@
         }
         document.getElementById('closeModalBtn').addEventListener('click', () => {
             document.getElementById('attrModal').style.display = 'none';
+        });
+        // Back button handler
+        document.getElementById('backBtn').addEventListener('click', () => {
+            window.history.back();
         });
         // Tab switching
         document.querySelectorAll('.tablink').forEach(btn=>{

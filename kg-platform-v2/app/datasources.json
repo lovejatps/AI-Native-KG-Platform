@@ -1,0 +1,13 @@
+[
+  {
+    "id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "system_name": "学校",
+    "db_type": "mysql",
+    "host": "127.0.0.1",
+    "port": 3306,
+    "username": "root",
+    "password": "123456",
+    "database": "school",
+    "status": "正常"
+  }
+]

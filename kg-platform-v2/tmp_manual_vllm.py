@@ -14,7 +14,7 @@ prompt = '请返回 JSON {"text":"hello"}'
 start = time.time()
 try:
     res = client.chat.completions.create(
-        model="qwen/qwen3.5-397b-a17b", messages=[{"role": "user", "content": prompt}]
+        model=settings.DEFAULT_LLM_MODEL, messages=[{"role": "user", "content": prompt}]
     )
     print("got response in", time.time() - start, "s")
     print(res)

@@ -34,16 +34,22 @@ KG_EXTRACT_PROMPT = """从以下文本中抽取知识图谱要素，请严格返
 要求：\n- 所有实体必须包含 `name`、`type`，并提供 `properties`（若无属性则返回空对象 `{}`）。\n- `relations` 中的 `from`、`to` 必须引用 `entities` 中的 `name`。\n- 请尽可能从文本中抽取年龄、性别、穿着、颜色、职业等属性。示例：\n  {\n    \"entities\": [\n      {\"name\": \"张三\", \"type\": \"人物\", \"properties\": {\"age\": 39, \"gender\": \"男\", \"clothing\": \"蓝色运动装\", \"occupation\": \"工程师\"}},\n      {\"name\": \"A公司\", \"type\": \"组织\", \"properties\": {}}\n    ],\n    \"relations\": [\n      {\"from\": \"张三\", \"to\": \"A公司\", \"type\": \"WORKS_FOR\"}\n    ]\n  }\n请严格遵循上述 JSON 格式返回，不要添加任何解释文字。\n\n{text}\n"""
 
 
+# ---------------------------------------------------------------------------
+# Updated prompt – enforce Chinese relation type names
+# ---------------------------------------------------------------------------
+KG_EXTRACT_PROMPT = """从以下文本中抽取知识图谱要素，请严格返回 JSON，包含实体属性（如年龄、性别、穿着、颜色、职业等），并使用**中文**关系类型描述。格式如下：\n{\n  \"entities\": [\n    {\n      \"name\": <实体名称>,\n      \"type\": <实体类型（如人物、组织等）>,\n      \"properties\": {\n        \"age\": <整数，可选>,\n        \"gender\": <性别可选>,\n        \"clothing\": <穿着描述可选>,\n        \"color\": <颜色描述可选>,\n        \"occupation\": <职业可选>\n        // 其他属性键值对\n      }\n    }\n  ],\n  \"relations\": [\n    {\"from\": <来源实体名称>, \"to\": <目标实体名称>, \"type\": <中文关系类型>}\n  ]\n}\n要求：\n- 所有实体必须包含 `name`、`type`，并提供 `properties`（若无属性则返回空对象 `{}`）。\n- `relations` 中的 `from`、`to` 必须引用 `entities` 中的 `name`。\n- 请使用中文描述关系类型（例如：`师徒关系`、`隶属`、`攻击`、`提供食物` 等）。\n- 请尽可能从文本中抽取年龄、性别、穿着、颜色、职业等属性。示例：\n{\n  \"entities\": [\n    {\"name\": \"张三\", \"type\": \"人物\", \"properties\": {\"age\": 39, \"gender\": \"男\", \"clothing\": \"蓝色运动装\", \"occupation\": \"工程师\"}},\n    {\"name\": \"A公司\", \"type\": \"组织\", \"properties\": {}}\n  ],\n  \"relations\": [\n    {\"from\": \"张三\", \"to\": \"A公司\", \"type\": \"隶属\"}\n  ]\n}\n请严格遵循上述 JSON 格式返回，不要添加任何解释文字。\n\n{text}\n"""
+
 def _validate_kg(data: Any) -> bool:
-    """Simple validation – ensure required top‑level keys exist and are lists.
-    Returns ``True`` if the structure looks correct, ``False`` otherwise.
-    """
+    """Validate KG structure."""
+    # Existing validation logic remains unchanged.
     if not isinstance(data, dict):
         return False
     for key in ("entities", "relations"):
         if key not in data or not isinstance(data[key], list):
             return False
     return True
+
+
 
 
 def extract_kg(
@@ -111,6 +117,8 @@ def extract_kg(
                         _logger.info(
                             f"KG extraction repaired via brace‑count truncation on attempt {attempt}"
                         )
+                        # Translate relation types to Chinese if needed
+                        parsed = _translate_relation_types(parsed)
                         return parsed
                 except Exception:
                     pass
@@ -145,29 +153,11 @@ def extract_kg(
         if attempt < max_retries:
             time.sleep(backoff * attempt)
     # All attempts failed – heuristic fallback
-    _logger.error(
-        "KG extraction failed after maximum retries; falling back to simple heuristic."
-    )
-    # Simple rule‑based extraction as fallback
-    candidates = []
-    candidates += [m.group() for m in re.finditer(r"[\u4e00-\u9fff]{2,}", chunk)]
-    candidates += [m.group() for m in re.finditer(r"\b[A-Za-z]{2,}\b", chunk)]
-    seen = set()
-    entities = []
-    for name in candidates:
-        if name not in seen:
-            seen.add(name)
-            entities.append({"name": name, "type": "Person", "properties": {}})
-    relations = []
-    for i in range(len(entities) - 1):
-        relations.append(
-            {
-                "from": entities[i]["name"],
-                "to": entities[i + 1]["name"],
-                "type": "related_to",
-            }
+        _logger.error(
+            "KG extraction failed after maximum retries; falling back to simple heuristic."
         )
-    return {"entities": entities, "relations": relations}
+        # Simple rule‑based extraction as fallback – return empty result to avoid spurious entities
+        return {"entities": [], "relations": []}
 
 
 # ---------------------------------------------------------------------------

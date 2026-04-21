@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Schema & 数据源管理</title>
+    <style>
+        body {font-family: Arial, sans-serif; margin: 2rem; display: flex; flex-direction: column; height: 100vh;}
+        .header {display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;}
+        .tabs {display:flex; gap:10px;}
+        .tab {padding:6px 12px; border:none; background:#e0e0e0; cursor:pointer;}
+        .tab.active {background:#c0c0c0; font-weight:bold;}
+        .return {padding:6px 12px; border:none; background:#d9534f; color:#fff; cursor:pointer;}
+        table {border-collapse:collapse; width:100%; margin-top:1rem;}
+        th, td {border:1px solid #ddd; padding:8px; text-align:left;}
+        th {background:#f0f0f0;}
+        .modal {display:none; position:fixed; inset:0; width:100%; height:100%; background:rgba(0,0,0,0.5); overflow:auto;}
+    .modal-content {background:#fff; margin:5% auto; padding:20px; width:90%; max-width:500px; border-radius:4px;}
+    @media (min-width:600px) {
+        .modal-content {width:400px;}
+    }
+        .modal-content {background:#fff; margin:5% auto; padding:20px; width:400px; border-radius:4px;}
+        label, select, input {display:block; width:100%; margin-top:8px;}
+    </style>
+    <script>
+        // ---------- 公共 ----------
+        function getKgId(){
+            const params = new URLSearchParams(window.location.search);
+            return params.get('kg_id');
+        }
+        function goBack(){
+            window.location.href = '/kg_page';
+        }
+
+        // ---------- Tab 切换 ----------
+        function showTab(tab){
+            const schemaTab = document.getElementById('schemaTab');
+            const datasourceTab = document.getElementById('datasourceTab');
+            const schemaSection = document.getElementById('schemaSection');
+            const datasourceSection = document.getElementById('datasourceSection');
+            if(tab==='schema'){
+                schemaTab.classList.add('active');
+                datasourceTab.classList.remove('active');
+                schemaSection.style.display='block';
+                datasourceSection.style.display='none';
+            }else{
+                datasourceTab.classList.add('active');
+                schemaTab.classList.remove('active');
+                datasourceSection.style.display='block';
+                schemaSection.style.display='none';
+            }
+        }
+
+        // ---------- Schema 管理 ----------
+        function loadModels(){
+            const kgId = getKgId();
+            if(!kgId){ alert('缺少 KG ID'); return; }
+            fetch(`/kg/${kgId}/models`).then(r=>r.json()).then(data=>{
+                const tbody = document.querySelector('#modelTable tbody');
+                tbody.innerHTML='';
+                data.models.forEach((m,i)=>{
+                    const tr=document.createElement('tr');
+                    tr.innerHTML=`
+                        <td>${i+1}</td>
+                        <td>${m.version}</td>
+                        <td>${m.created_at}</td>
+                        <td>${m.status}</td>
+                        <td class="actions"><button onclick="viewModel('${m.id}')">查看</button> ${m.status === '草稿' ? '<button onclick="openGraphEdit(\''+m.id+'\')">编辑</button> <button onclick="deleteModel(\''+m.id+'\')">删除</button> <button onclick="publishModel(\''+m.id+'\')">发布</button>' : ''}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }).catch(()=>{ alert('加载模型失败'); });
+        }
+        async function addModel(){
+            const kgId = getKgId();
+            if(!kgId){ alert('缺少 KG ID'); return; }
+            const resp = await fetch(`/kg/${kgId}/models`, {method:'POST'});
+            if(resp.ok){ 
+                loadModels(); 
+                alert('模型生成请求已提交');
+            } else { 
+                alert('生成模型失败'); 
+            }
+        }
+        async function editModel(modelId){
+            const kgId = getKgId();
+            if(!kgId){ alert('缺少 KG ID'); return; }
+            // 读取当前模型完整 schema
+            const resp = await fetch(`/kg/${kgId}/models/${modelId}`);
+            if(!resp.ok){ alert('获取模型失败'); return; }
+            const data = await resp.json();
+            const schema = data.schema || {};
+            // 填充编辑框并展示 modal
+            document.getElementById('editSchema').value = JSON.stringify(schema, null, 2);
+            document.getElementById('editModelId').value = modelId;
+            document.getElementById('editModal').style.display = 'block';
+        }
+        function closeEditModal(){
+            document.getElementById('editModal').style.display = 'none';
+        }
+        async function submitEditModel(){
+    const kgId = getKgId();
+    const modelId = document.getElementById('editModelId').value;
+    let newSchema;
+    try{
+        newSchema = JSON.parse(document.getElementById('editSchema').value);
+    }catch(e){
+        alert('JSON 语法错误: '+e);
+        return;
+    }
+    const resp = await fetch(`/kg/${kgId}/models/${modelId}`,{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({schema:newSchema})
+    });
+    if(resp.ok){
+        closeEditModal();
+        loadModels();
+    } else {
+        alert('编辑模型失败');
+    }
+}
+
+// Open X6 graph editor in a new window
+function openGraphEdit(modelId){
+    const kgId = getKgId();
+    if(!kgId){ alert('缺少 KG ID'); return; }
+    const url = `/static/graph_editor.html?kg_id=${kgId}&model_id=${modelId}`;
+window.open(url, 'graphEdit', 'width=1200,height=800');
+        }
+        async function deleteModel(modelId){
+            if(!confirm('确认删除此模型？')) return;
+            const kgId = getKgId();
+            const resp = await fetch(`/kg/${kgId}/models/${modelId}`, {method:'DELETE'});
+            if(resp.ok){ loadModels(); } else { alert('删除模型失败'); }
+        }
+        async function publishModel(modelId){
+            if(!confirm('确认发布此模型？此操作会把已有正式模型设为草稿。')) return;
+            const kgId = getKgId();
+            const resp = await fetch(`/kg/${kgId}/models/${modelId}/publish`, {method:'POST'});
+            if(resp.ok){ loadModels(); } else { alert('发布模型失败'); }
+        }
+
+        // ---------- 数据源管理（原有功能） ----------
+        async function loadIntegrations(){
+            const kgId = getKgId();
+            if(!kgId) return alert('缺少 KG ID');
+            const resp = await fetch(`/kg/${kgId}/integrations`);
+            const data = await resp.json();
+            const tbody = document.querySelector('#intTable tbody');
+            tbody.innerHTML='';
+            data.integrations.forEach((ln, idx)=>{
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${idx+1}</td>
+                    <td>${ln.system_name}</td>
+                    <td>${ln.database}</td>
+                    <td>${ln.tables.length}</td>
+                    <td class="actions"><button onclick="deleteIntegration('${ln.id}')">删除</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        function openModal(){ document.getElementById('intModal').style.display='block'; }
+        function closeModal(){ document.getElementById('intModal').style.display='none'; }
+        async function populateDatasources(){
+            const resp = await fetch('/datasources');
+            const data = await resp.json();
+            window._systemMap = {};
+            data.datasources.forEach(ds => {
+                const sys = ds.system_name;
+                if (!window._systemMap[sys]) window._systemMap[sys] = [];
+                window._systemMap[sys].push(ds);
+            });
+            const sysSel = document.getElementById('systemSelect');
+            sysSel.innerHTML = '';
+            Object.keys(window._systemMap).forEach(sys => {
+                const opt = document.createElement('option');
+                opt.value = sys;
+                opt.textContent = sys;
+                sysSel.appendChild(opt);
+            });
+            if (sysSel.options.length) systemChanged();
+        }
+        function systemChanged(){
+            const sys = document.getElementById('systemSelect').value;
+            const dbSel = document.getElementById('dbSelect');
+            dbSel.innerHTML = '';
+            const dsList = window._systemMap[sys] || [];
+            dsList.forEach(ds => {
+                const opt = document.createElement('option');
+                opt.value = ds.id;
+                opt.textContent = ds.database || ds.system_name;
+                dbSel.appendChild(opt);
+            });
+            if (dbSel.options.length) dbChanged();
+        }
+        async function dbChanged(){
+            const dsId = document.getElementById('dbSelect').value;
+            const tbody = document.querySelector('#tablesTable tbody');
+            tbody.innerHTML = '<tr><td colspan="5">加载表中…</td></tr>';
+            const resp = await fetch(`/datasources/${dsId}/schema`);
+            if(!resp.ok){ tbody.innerHTML = '<tr><td colspan="5">加载失败</td></tr>'; return; }
+            const data = await resp.json();
+            tbody.innerHTML = '';
+            data.tables.forEach((tbl, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align:center;"><input type="checkbox" value="${tbl.name}"></td>
+                    <td>${idx+1}</td>
+                    <td>${tbl.name}</td>
+                    <td>${tbl.create_time || ''}</td>
+                    <td>${tbl.comment || ''}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        function selectAll(checked){
+            document.querySelectorAll('#tablesTable tbody input[type="checkbox"]').forEach(cb => cb.checked = checked);
+        }
+        async function submitIntegration(event){
+            event.preventDefault();
+            const kgId = getKgId();
+            const dsId = document.getElementById('dbSelect').value;
+            const checked = Array.from(document.querySelectorAll('#tablesTable tbody input:checked')).map(i=>i.value);
+            const payload = {ds_id: dsId, tables: checked};
+            const resp = await fetch(`/kg/${kgId}/integrations`, {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify(payload)
+            });
+            if(resp.ok){ closeModal(); loadIntegrations(); }
+            else alert('添加失败');
+        }
+        async function deleteIntegration(linkId){
+            const kgId = getKgId();
+            if(!confirm('确认删除此关联？')) return;
+            const resp = await fetch(`/kg/${kgId}/integrations/${linkId}`, {method:'DELETE'});
+            if(resp.ok) loadIntegrations(); else alert('删除失败');
+        }
+
+        // ---------- Schema 查看 ----------
+        async function viewModel(modelId){
+            const kgId = getKgId();
+            if(!kgId){ alert('缺少 KG ID'); return; }
+            const resp = await fetch(`/kg/${kgId}/models/${modelId}`);
+            if(!resp.ok){ alert('加载模型详情失败'); return; }
+            const data = await resp.json();
+            const schema = data.schema || {};
+            const pre = document.getElementById('schemaPre');
+            pre.textContent = JSON.stringify(schema, null, 2);
+            document.getElementById('viewModal').style.display = 'block';
+        }
+        function closeViewModal(){
+            document.getElementById('viewModal').style.display = 'none';
+        }
+
+        // ---------- 初始化 ----------
+        document.addEventListener('DOMContentLoaded',()=>{
+            // 默认显示 Schema 管理
+            showTab('schema');
+            loadModels();
+            loadIntegrations();
+            populateDatasources();
+            document.getElementById('intForm').addEventListener('submit', submitIntegration);
+            // Tab 按钮事件
+            document.getElementById('schemaTab').addEventListener('click',()=>showTab('schema'));
+            document.getElementById('datasourceTab').addEventListener('click',()=>showTab('datasource'));
+        });
+    </script>
+</head>
+<body>
+    <div class="header">
+        <div class="tabs">
+            <button id="schemaTab" class="tab active">Schema管理</button>
+            <button id="datasourceTab" class="tab">数据源管理</button>
+        </div>
+        <button class="return" onclick="goBack()">返回</button>
+    </div>
+
+<!-- Schema 管理区块 -->
+    <div id="schemaSection">
+        <button onclick="addModel()">新增模型</button>
+        <table id="modelTable">
+            <thead>
+                <tr><th>序号</th><th>模型版本</th><th>更新时间</th><th>状态</th><th>操作</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- 数据源管理区块 -->
+    <div id="datasourceSection" style="display:none;">
+        <button onclick="openModal()">增加数据源</button>
+        <table id="intTable">
+            <thead>
+                <tr><th>序号</th><th>系统</th><th>数据库名</th><th>表的数量</th><th>操作</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <!-- Modal for adding integration -->
+        <div id="intModal" class="modal">
+            <div class="modal-content">
+                <h3>系统配置界面</h3>
+                <form id="intForm">
+                    <!-- 筛选条件区域 -->
+                    <div style="display:flex; gap:10px; margin-bottom:10px;">
+                        <div style="flex:1;">
+                            <label>系统项</label>
+                            <select id="systemSelect" onchange="systemChanged()" required></select>
+                        </div>
+                        <div style="flex:1;">
+                            <label>库选项</label>
+                            <select id="dbSelect" onchange="dbChanged()" required></select>
+                        </div>
+                    </div>
+                    <!-- 数据列表区域 -->
+                    <div style="margin-top:10px; max-height:250px; overflow:auto;">
+                        <div style="margin-bottom:5px;">
+                            <button type="button" onclick="selectAll(true)">☑ 全选</button>
+                            <button type="button" onclick="selectAll(false)">☐ 反选</button>
+                        </div>
+                        <table id="tablesTable" style="width:100%; border-collapse:collapse;">
+                            <thead>
+                                <tr>
+                                    <th style="width:30px;">选择</th>
+                                    <th>编号</th>
+                                    <th>名称</th>
+                                    <th>创建时间</th>
+                                    <th>备注</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top:10px; text-align:right;">
+                        <button type="button" onclick="closeModal()">取消</button>
+                        <button type="submit">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+<!-- Modal for viewing schema -->
+        <div id="viewModal" class="modal">
+            <div class="modal-content">
+                <h3>Schema 内容</h3>
+                <pre id="schemaPre" style="max-height:400px; overflow:auto; background:#f9f9f9; padding:10px;"></pre>
+                <div style="margin-top:10px; text-align:right;">
+                    <button type="button" onclick="closeViewModal()">关闭</button>
+                </div>
+            </div>
+        </div>
+        <!-- Modal for editing schema -->
+        <div id="editModal" class="modal">
+            <div class="modal-content">
+                <h3>编辑模型 Schema</h3>
+                <input type="hidden" id="editModelId" />
+                <textarea id="editSchema" rows="15" style="width:100%;"></textarea>
+                <div style="margin-top:10px; text-align:right;">
+                    <button type="button" onclick="closeEditModal()">取消</button>
+                    <button type="button" onclick="submitEditModel()">保存</button>
+                </div>
+            </div>
+        </div>
+</body>
+</html>

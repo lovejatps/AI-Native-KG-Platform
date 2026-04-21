@@ -88,7 +88,11 @@ class LLM:
         settings = get_settings()
         self.endpoint = endpoint or getattr(settings, "VLLM_ENDPOINT", None)
         self.api_key = api_key or getattr(settings, "VLLM_API_KEY", None)
-        self.model = model or getattr(settings, "DEFAULT_LLM_MODEL", "gpt-4o")
+        # Enforce platform-wide default model
+        model_name = model or getattr(settings, "DEFAULT_LLM_MODEL", None)
+        if model_name != "openai/gpt-oss-120b":
+            model_name = "openai/gpt-oss-120b"
+        self.model = model_name
         self.timeout = (
             timeout or 120
         )  # seconds – extended default to accommodate slower VLLM responses

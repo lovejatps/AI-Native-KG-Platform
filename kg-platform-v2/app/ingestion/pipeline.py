@@ -62,6 +62,9 @@ def _process_chunk(chunk: str, store: VectorStore, chunk_id: str) -> None:
     # 2️⃣ Extract KG from the chunk
     kg = extract_kg(chunk)
     kg = enrich_entities_from_relations(kg)
+    # Filter out schema/table entities that may be present in LLM output
+    if kg and isinstance(kg.get("entities"), list):
+        kg["entities"] = [e for e in kg["entities"] if e.get("type") != "Table"]
     if not kg or not kg.get("entities"):
         _logger.info(f"No KG entities extracted from chunk {chunk_id[:8]}.")
         return
