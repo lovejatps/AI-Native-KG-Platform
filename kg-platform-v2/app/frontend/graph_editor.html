@@ -46,17 +46,27 @@
     <button onclick="closeEditor()">关闭</button>
   </div>
 
-  <!-- 关系弹窗 -->
-  <div id="edgeModal" class="modal">
-    <div class="modal-content">
-      <h3>新增关系</h3>
-      <label>关系名称: <input type="text" id="relName" required></label><br><br>
-      <label>来源实体: <select id="relSource" required></select></label><br><br>
-      <label>目标实体: <select id="relTarget" required></select></label><br><br>
-      <button onclick="confirmAddEdge()">确定</button>
-      <button onclick="closeEdgeModal()">取消</button>
-    </div>
+<!-- 关系弹窗 -->
+<div id="edgeModal" class="modal">
+  <div class="modal-content">
+    <h3>新增关系</h3>
+    <label>关系名称: <input type="text" id="relName" required></label><br><br>
+    <label>来源实体: <select id="relSource" required></select></label><br><br>
+    <label>目标实体: <select id="relTarget" required></select></label><br><br>
+    <button onclick="confirmAddEdge()">确定</button>
+    <button onclick="closeEdgeModal()">取消</button>
   </div>
+</div>
+
+<!-- 编辑关系弹窗 -->
+<div id="editEdgeModal" class="modal">
+  <div class="modal-content">
+    <h3>编辑关系名称</h3>
+    <label>关系名称: <input type="text" id="editEdgeName" required></label><br><br>
+    <button onclick="confirmEditEdge()">确定</button>
+    <button onclick="closeEditEdgeModal()">取消</button>
+  </div>
+</div>
 
   <div style="display:flex; height:calc(100% - 80px);">
     <!-- 左侧实体列表（Entity Panel） -->
@@ -112,6 +122,47 @@
       },
       interacting: { nodeMovable: true, edgeMovable: true },
     });
+
+    // ---------- 边交互 ----------
+    let selectedEdge = null;
+    // 选中边并打开编辑弹窗
+    graph.on('edge:click', ({ edge }) => {
+      selectedEdge = edge;
+      const currentName = (edge.getLabels && edge.getLabels()[0] && edge.getLabels()[0].attrs && edge.getLabels()[0].attrs.label && edge.getLabels()[0].attrs.label.text) || '';
+      document.getElementById('editEdgeName').value = currentName;
+      document.getElementById('editEdgeModal').style.display = 'block';
+    });
+    // 右键删除确认
+    graph.on('edge:contextmenu', ({ e, edge }) => {
+      e.preventDefault();
+      if (confirm('确认删除此关系吗？')) {
+        graph.removeEdge(edge);
+      }
+    });
+    // 确认编辑关系名称
+    function confirmEditEdge() {
+      if (!selectedEdge) return;
+      const newName = document.getElementById('editEdgeName').value.trim();
+      if (newName) {
+        // 获取源目标节点
+        const srcNode = selectedEdge.getSourceCell ? selectedEdge.getSourceCell() : null;
+        const tgtNode = selectedEdge.getTargetCell ? selectedEdge.getTargetCell() : null;
+        // 移除旧边并添加新边，保持相同连线，仅更改标签文本
+        if (srcNode && tgtNode) {
+          graph.removeEdge(selectedEdge);
+          graph.addEdge({
+            source: srcNode,
+            target: tgtNode,
+            labels: [{ attrs: { label: { text: newName } } }],
+          });
+        }
+      }
+      closeEditEdgeModal();
+    }
+    function closeEditEdgeModal() {
+      document.getElementById('editEdgeModal').style.display = 'none';
+      selectedEdge = null;
+    }
 
 
 
