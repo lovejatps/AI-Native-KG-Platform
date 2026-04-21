@@ -5,6 +5,9 @@
   <title>模型图谱编辑</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@antv/x6@latest/dist/x6.css" />
   <style>
+    .modal {z-index: 10000;}
+    .modal-content {z-index: 10001;}
+
     body {font-family: Arial, sans-serif; margin:0; height:100vh; display:flex; flex-direction:column;}
     .toolbar {padding:8px; background:#f5f5f5; display:flex; gap:8px;}
     #graphContainer {flex:1; background:#fff;}
@@ -14,6 +17,18 @@
   <script src="https://cdn.jsdelivr.net/npm/@antv/x6@latest/dist/x6.min.js"></script>
 </head>
 <body>
+  <!-- 原始字段映射弹窗 -->
+  <div id="fieldMapModal" class="modal">
+    <div class="modal-content">
+      <h3>映射原始字段</h3>
+      <label>系统: <select id="fieldSystem" required></select></label><br><br>
+      <label>数据库: <select id="fieldDatabase" required></select></label><br><br>
+      <label>表: <select id="fieldTable" required></select></label><br><br>
+      <label>属性: <select id="fieldColumn" required></select></label><br><br>
+      <button onclick="confirmFieldMap()">确定</button>
+      <button onclick="closeFieldMapModal()">取消</button>
+    </div>
+  </div>
   <!-- 顶部栏（关键控制区） -->
   <div style="padding:8px; background:#f5f5f5; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd;">
     <div>数据源：<span id="dataSourceInfo">车队系统</span> | Schema版本：<span id="schemaVersionInfo">v1.2</span></div>
@@ -25,10 +40,22 @@
   </div>
 
   <div class="toolbar" style="padding:8px; background:#fafafa; border-bottom:1px solid #ddd;">
-    <button onclick="addNode()">+ 实体</button>
+
     <button onclick="createEntity()">+ 新建实体</button>
-    <button onclick="addEdge()">+ 关系</button>
+    <button onclick="openAddEdgeModal()">+ 关系</button>
     <button onclick="closeEditor()">关闭</button>
+  </div>
+
+  <!-- 关系弹窗 -->
+  <div id="edgeModal" class="modal">
+    <div class="modal-content">
+      <h3>新增关系</h3>
+      <label>关系名称: <input type="text" id="relName" required></label><br><br>
+      <label>来源实体: <select id="relSource" required></select></label><br><br>
+      <label>目标实体: <select id="relTarget" required></select></label><br><br>
+      <button onclick="confirmAddEdge()">确定</button>
+      <button onclick="closeEdgeModal()">取消</button>
+    </div>
   </div>
 
   <div style="display:flex; height:calc(100% - 80px);">
@@ -105,23 +132,205 @@
       });
     }
 
-    function addEdge() {
-      const src = prompt('来源实体名称');
-      const tgt = prompt('目标实体名称');
-      const type = prompt('关系类型（标签）');
-      if (!src || !tgt || !type) return;
-      const srcNode = graph.getNodes().find(n => n.getLabel() === src);
-      const tgtNode = graph.getNodes().find(n => n.getLabel() === tgt);
-      if (!srcNode || !tgtNode) {
-        alert('未找到对应的实体节点');
-        return;
-      }
-      graph.addEdge({
-        source: srcNode,
-        target: tgtNode,
-        labels: [{ attrs: { label: { text: type } } }],
+function openAddEdgeModal() {
+  // Populate entity dropdowns from current schema
+  const sourceSelect = document.getElementById('relSource');
+  const targetSelect = document.getElementById('relTarget');
+  sourceSelect.innerHTML = '';
+  targetSelect.innerHTML = '';
+  const entities = Object.keys(entityProps);
+  entities.forEach(name => {
+    const opt1 = document.createElement('option');
+    opt1.value = name;
+    opt1.textContent = name;
+    sourceSelect.appendChild(opt1);
+    const opt2 = document.createElement('option');
+    opt2.value = name;
+    opt2.textContent = name;
+    targetSelect.appendChild(opt2);
+  });
+  // Reset input fields
+  document.getElementById('relName').value = '';
+  document.getElementById('relSource').selectedIndex = 0;
+  document.getElementById('relTarget').selectedIndex = 0;
+  // Show modal
+  document.getElementById('edgeModal').style.display = 'block';
+}
+
+function closeEdgeModal() {
+  document.getElementById('edgeModal').style.display = 'none';
+}
+
+// ---------- 原始字段映射 ----------
+// Real data source integration – fetch systems, databases, tables, columns from backend
+let datasourceList = [];
+let availableSystems = [];
+let systemDatabases = {};
+let dsIdMap = {}; // key: `${system}|${database}` => datasource id
+let databaseTables = {};
+let tableColumns = {};
+let fieldMapContext = {entity: null, idx: null};
+
+async function loadDataSources() {
+  try {
+    const resp = await fetch('/datasources');
+    const data = await resp.json();
+    datasourceList = data.datasources || [];
+    // Build system & database mappings
+    const systemSet = new Set();
+    datasourceList.forEach(ds => {
+      const sys = ds.system_name || ds.id;
+      const db = ds.database || '';
+      systemSet.add(sys);
+      if (!systemDatabases[sys]) systemDatabases[sys] = [];
+      if (db && !systemDatabases[sys].includes(db)) systemDatabases[sys].push(db);
+      dsIdMap[`${sys}|${db}`] = ds.id;
+    });
+    availableSystems = Array.from(systemSet);
+  } catch (e) {
+    console.error('Failed to load datasources', e);
+    alert('无法加载数据源列表');
+  }
+}
+
+async function loadSchemaForDatasource(dsId) {
+  try {
+    const resp = await fetch(`/datasources/${dsId}/schema`);
+    const schema = await resp.json();
+    // schema: { database: <>, tables: [{name, columns: [{name, type, comment}...] }...] }
+    const tables = schema.tables || [];
+    databaseTables = {};
+    tableColumns = {};
+    tables.forEach(t => {
+      const tName = t.name;
+      databaseTables[tName] = [];
+      t.columns.forEach(col => {
+        const cName = col.name;
+        databaseTables[tName].push(cName);
+        tableColumns[`${tName}.${cName}`] = {name: cName, type: col.type, comment: col.comment};
       });
+    });
+  } catch (e) {
+    console.error('Failed to load schema', e);
+    alert('获取表结构失败');
+  }
+}
+
+async function openMapFieldModal(entity, idx) {
+  fieldMapContext = {entity, idx};
+  // Ensure data sources are loaded
+  if (availableSystems.length === 0) await loadDataSources();
+  const systemSelect = document.getElementById('fieldSystem');
+  const dbSelect = document.getElementById('fieldDatabase');
+  const tableSelect = document.getElementById('fieldTable');
+  const columnSelect = document.getElementById('fieldColumn');
+  // Clear previous options
+  systemSelect.innerHTML = '';
+  dbSelect.innerHTML = '';
+  tableSelect.innerHTML = '';
+  columnSelect.innerHTML = '';
+  // Populate systems
+  availableSystems.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s;
+    opt.textContent = s;
+    systemSelect.appendChild(opt);
+  });
+  // System change handler – populate databases and load schema for first db
+  systemSelect.onchange = async () => {
+    const sys = systemSelect.value;
+    const dbs = systemDatabases[sys] || [];
+    dbSelect.innerHTML = '';
+    dbs.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = d;
+      dbSelect.appendChild(opt);
+    });
+    if (dbs.length) {
+      dbSelect.dispatchEvent(new Event('change'));
     }
+  };
+  // Database change handler – load tables/columns for that datasource
+  dbSelect.onchange = async () => {
+    const sys = systemSelect.value;
+    const db = dbSelect.value;
+    const dsId = dsIdMap[`${sys}|${db}`];
+    if (!dsId) {
+      alert('未找到对应的数据源');
+      return;
+    }
+    await loadSchemaForDatasource(dsId);
+    // Populate tables
+    tableSelect.innerHTML = '';
+    Object.keys(databaseTables).forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t;
+      tableSelect.appendChild(opt);
+    });
+    if (Object.keys(databaseTables).length) tableSelect.dispatchEvent(new Event('change'));
+  };
+  // Table change handler – populate columns
+  tableSelect.onchange = () => {
+    const t = tableSelect.value;
+    const cols = databaseTables[t] || [];
+    columnSelect.innerHTML = '';
+    cols.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c;
+      opt.textContent = c;
+      columnSelect.appendChild(opt);
+    });
+  };
+  // Initialize first level
+  if (availableSystems.length) systemSelect.dispatchEvent(new Event('change'));
+  // Show modal
+  document.getElementById('fieldMapModal').style.display = 'block';
+}
+
+function closeFieldMapModal() {
+  document.getElementById('fieldMapModal').style.display = 'none';
+}
+
+function confirmFieldMap() {
+  const system = document.getElementById('fieldSystem').value;
+  const database = document.getElementById('fieldDatabase').value;
+  const table = document.getElementById('fieldTable').value;
+  const column = document.getElementById('fieldColumn').value;
+  if (!system || !database || !table || !column) {
+    alert('请选择系统、数据库、表和属性');
+    return;
+  }
+  const {entity, idx} = fieldMapContext;
+  if (entity && typeof idx === 'number') {
+    entityProps[entity][idx].origField = `${system}.${database}.${table}.${column}`;
+    showPropertyPanel(entity);
+  }
+  closeFieldMapModal();
+}
+
+function confirmAddEdge() {
+  const name = document.getElementById('relName').value.trim();
+  const src = document.getElementById('relSource').value;
+  const tgt = document.getElementById('relTarget').value;
+  if (!name || !src || !tgt) {
+    alert('请完整填写关系名称、来源实体和目标实体');
+    return;
+  }
+  const srcNode = graph.getNodes().find(n => n.getLabel() === src);
+  const tgtNode = graph.getNodes().find(n => n.getLabel() === tgt);
+  if (!srcNode || !tgtNode) {
+    alert('未找到对应的实体节点');
+    return;
+  }
+  graph.addEdge({
+    source: srcNode,
+    target: tgtNode,
+    labels: [{ attrs: { label: { text: name } } }],
+  });
+  closeEdgeModal();
+}
 
 function closeEditor() {
       window.close();
@@ -225,7 +434,7 @@ const li = document.createElement('li');
                 <tr><th>原始字段</th><th>语义名</th><th>类型</th><th>展示</th><th>操作</th></tr>`;
       props.forEach((p, idx) => {
         html += `<tr data-idx="${idx}">
-                  <td><input style="width:90%;" value="${p.origField}" readonly/></td>
+                  <td><input style="width:90%;" value="${p.origField}" readonly/><button onclick="openMapFieldModal('${name}', ${idx})" style="margin-left:4px;">+</button></td>
                   <td><input style="width:90%;" value="${p.semantic}" onchange="updateProp('${name}', ${idx}, 'semantic', this.value)"/></td>
                   <td><select onchange="updateProp('${name}', ${idx}, 'type', this.value)">
                         <option value="string" ${p.type==='string'?'selected':''}>string</option>
