@@ -1,0 +1,264 @@
+{
+  "id": "ef7c35ba-30d1-4c27-b3cd-7f935aab1de8",
+  "timestamp": "2026-04-21T10:18:28.608917Z",
+  "filename": "三打白骨精.md",
+  "graph": {
+    "nodes": [
+      {
+        "id": "class",
+        "properties": {
+          "origin": "schema",
+          "name": "class",
+          "type": "Table"
+        }
+      },
+      {
+        "id": "grade",
+        "properties": {
+          "origin": "schema",
+          "name": "grade",
+          "type": "Table"
+        }
+      },
+      {
+        "id": "student",
+        "properties": {
+          "origin": "schema",
+          "name": "student",
+          "type": "Table"
+        }
+      },
+      {
+        "id": "subject",
+        "properties": {
+          "origin": "schema",
+          "name": "subject",
+          "type": "Table"
+        }
+      },
+      {
+        "id": "subject_scores",
+        "properties": {
+          "origin": "schema",
+          "name": "subject_scores",
+          "type": "Table"
+        }
+      },
+      {
+        "id": "teacher",
+        "properties": {
+          "origin": "schema",
+          "name": "teacher",
+          "type": "Table"
+        }
+      },
+      {
+        "id": "村姑",
+        "properties": {
+          "occupation": "村姑",
+          "gender": "女",
+          "origin": "extraction",
+          "name": "村姑",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "悟空",
+        "properties": {
+          "occupation": "徒弟",
+          "gender": "男",
+          "origin": "extraction",
+          "name": "悟空",
+          "alias": "齐天大圣",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "唐僧",
+        "properties": {
+          "occupation": "和尚",
+          "gender": "男",
+          "origin": "extraction",
+          "name": "唐僧",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "八戒",
+        "properties": {
+          "occupation": "徒弟",
+          "gender": "男",
+          "origin": "extraction",
+          "name": "八戒",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "老妇",
+        "properties": {
+          "occupation": "村民",
+          "gender": "女",
+          "origin": "extraction",
+          "name": "老妇",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "老翁",
+        "properties": {
+          "occupation": "村民",
+          "gender": "男",
+          "origin": "extraction",
+          "name": "老翁",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "沙僧",
+        "properties": {
+          "occupation": "徒弟",
+          "gender": "男",
+          "origin": "extraction",
+          "name": "沙僧",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "长老",
+        "properties": {
+          "origin": "extraction",
+          "name": "长老",
+          "type": "人物"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "source": "class",
+        "target": "grade",
+        "type": "FK",
+        "origin": null
+      },
+      {
+        "source": "student",
+        "target": "class",
+        "type": "FK",
+        "origin": null
+      },
+      {
+        "source": "subject",
+        "target": "grade",
+        "type": "FK",
+        "origin": null
+      },
+      {
+        "source": "subject_scores",
+        "target": "subject",
+        "type": "FK",
+        "origin": null
+      },
+      {
+        "source": "subject_scores",
+        "target": "student",
+        "type": "FK",
+        "origin": null
+      },
+      {
+        "source": "teacher",
+        "target": "class",
+        "type": "FK",
+        "origin": null
+      },
+      {
+        "source": "村姑",
+        "target": "长老",
+        "type": "送斋",
+        "origin": "extraction"
+      },
+      {
+        "source": "悟空",
+        "target": "唐僧",
+        "type": "师徒关系",
+        "origin": "extraction"
+      },
+      {
+        "source": "悟空",
+        "target": "老翁",
+        "type": "识破",
+        "origin": "extraction"
+      },
+      {
+        "source": "悟空",
+        "target": "老翁",
+        "type": "攻击",
+        "origin": "extraction"
+      },
+      {
+        "source": "悟空",
+        "target": "老妇",
+        "type": "识破",
+        "origin": "extraction"
+      },
+      {
+        "source": "悟空",
+        "target": "老妇",
+        "type": "攻击",
+        "origin": "extraction"
+      },
+      {
+        "source": "悟空",
+        "target": "村姑",
+        "type": "识破",
+        "origin": "extraction"
+      },
+      {
+        "source": "悟空",
+        "target": "村姑",
+        "type": "攻击",
+        "origin": "extraction"
+      },
+      {
+        "source": "唐僧",
+        "target": "悟空",
+        "type": "逐出师门",
+        "origin": "extraction"
+      },
+      {
+        "source": "唐僧",
+        "target": "悟空",
+        "type": "斥责",
+        "origin": "extraction"
+      },
+      {
+        "source": "唐僧",
+        "target": "悟空",
+        "type": "阻止",
+        "origin": "extraction"
+      },
+      {
+        "source": "八戒",
+        "target": "村姑",
+        "type": "评价",
+        "origin": "extraction"
+      },
+      {
+        "source": "老妇",
+        "target": "唐僧",
+        "type": "求助",
+        "origin": "extraction"
+      },
+      {
+        "source": "老翁",
+        "target": "长老",
+        "type": "求助",
+        "origin": "extraction"
+      },
+      {
+        "source": "沙僧",
+        "target": "唐僧",
+        "type": "劝说",
+        "origin": "extraction"
+      }
+    ]
+  }
+}

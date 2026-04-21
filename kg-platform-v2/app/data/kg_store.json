@@ -135,5 +135,587 @@
         }
       ]
     }
+  },
+  {
+    "id": "0b60fab0-bf76-4346-a723-dce1ab6cdba0",
+    "name": "洗白白",
+    "description": "",
+    "entity_count": 8,
+    "relation_count": 0,
+    "created_at": "2026-04-21T09:59:22.998348",
+    "updated_at": "2026-04-21T10:00:57.508737",
+    "extraction_ids": [
+      "593bf33c-a186-4eb7-9dd0-855f8cf23497"
+    ],
+    "graph": {
+      "nodes": [
+        {
+          "id": "村姑",
+          "properties": {
+            "occupation": "村姑",
+            "gender": "女",
+            "origin": "extraction",
+            "name": "村姑",
+            "type": "人物"
+          }
+        },
+        {
+          "id": "悟空",
+          "properties": {
+            "occupation": "大圣",
+            "gender": "男",
+            "origin": "extraction",
+            "name": "悟空",
+            "type": "人物"
+          }
+        },
+        {
+          "id": "唐僧",
+          "properties": {
+            "occupation": "和尚",
+            "gender": "男",
+            "origin": "extraction",
+            "name": "唐僧",
+            "type": "人物"
+          }
+        },
+        {
+          "id": "八戒",
+          "properties": {
+            "occupation": "猪八戒",
+            "gender": "男",
+            "origin": "extraction",
+            "name": "八戒",
+            "type": "人物"
+          }
+        },
+        {
+          "id": "沙僧",
+          "properties": {
+            "occupation": "沙僧",
+            "gender": "男",
+            "origin": "extraction",
+            "name": "沙僧",
+            "type": "人物"
+          }
+        },
+        {
+          "id": "老妇",
+          "properties": {
+            "occupation": "老妇",
+            "gender": "女",
+            "origin": "extraction",
+            "name": "老妇",
+            "type": "人物"
+          }
+        },
+        {
+          "id": "老翁",
+          "properties": {
+            "occupation": "老翁",
+            "gender": "男",
+            "origin": "extraction",
+            "name": "老翁",
+            "type": "人物"
+          }
+        },
+        {
+          "id": "长老",
+          "properties": {
+            "origin": "extraction",
+            "name": "长老",
+            "type": "人物"
+          }
+        }
+      ],
+      "relationships": []
+    }
+  },
+  {
+    "id": "fe80533c-b6d9-4470-824c-011f798a3f12",
+    "name": "白嘿嘿",
+    "description": "",
+    "entity_count": 14,
+    "relation_count": 21,
+    "created_at": "2026-04-21T10:14:27.566249",
+    "updated_at": "2026-04-21T10:18:28.623343",
+    "extraction_ids": [
+      "ef7c35ba-30d1-4c27-b3cd-7f935aab1de8"
+    ],
+    "graph": {
+      "nodes": [
+        {
+          "id": "class",
+          "properties": {
+            "origin": "schema",
+            "name": "class",
+            "type": "Table"
+          }
+        },
+        {
+          "id": "grade",
+          "properties": {
+            "origin": "schema",
+            "name": "grade",
+            "type": "Table"
+          }
+        },
+        {
+          "id": "student",
+          "properties": {
+            "origin": "schema",
+            "name": "student",
+            "type": "Table"
+          }
+        },
+        {
+          "id": "subject",
+          "properties": {
+            "origin": "schema",
+            "name": "subject",
+            "type": "Table"
+          }
+        },
+        {
+          "id": "subject_scores",
+          "properties": {
+            "origin": "schema",
+            "name": "subject_scores",
+            "type": "Table"
+          }
+        },
+        {
+          "id": "teacher",
+          "properties": {
+            "origin": "schema",
+            "name": "teacher",
+            "type": "Table"
+          }
+        },
+        {
+          "id": "村姑",
+          "properties": {
+            "occupation": "村姑",
+            "gender": "女",
+            "origin": "extraction",
+            "name": "村姑",
+            "type": "人物"
+          }
+        },
+        {
+          "id": "悟空",
+          "properties": {
+            "occupation": "徒弟",
+            "gender": "男",
+            "origin": "extraction",
+            "name": "悟空",
+            "alias": "齐天大圣",
+            "type": "人物"
+          }
+        },
+        {
+          "id": "唐僧",
+          "properties": {
+            "occupation": "和尚",
+            "gender": "男",
+            "origin": "extraction",
+            "name": "唐僧",
+            "type": "人物"
+          }
+        },
+        {
+          "id": "八戒",
+          "properties": {
+            "occupation": "徒弟",
+            "gender": "男",
+            "origin": "extraction",
+            "name": "八戒",
+            "type": "人物"
+          }
+        },
+        {
+          "id": "老妇",
+          "properties": {
+            "occupation": "村民",
+            "gender": "女",
+            "origin": "extraction",
+            "name": "老妇",
+            "type": "人物"
+          }
+        },
+        {
+          "id": "老翁",
+          "properties": {
+            "occupation": "村民",
+            "gender": "男",
+            "origin": "extraction",
+            "name": "老翁",
+            "type": "人物"
+          }
+        },
+        {
+          "id": "沙僧",
+          "properties": {
+            "occupation": "徒弟",
+            "gender": "男",
+            "origin": "extraction",
+            "name": "沙僧",
+            "type": "人物"
+          }
+        },
+        {
+          "id": "长老",
+          "properties": {
+            "origin": "extraction",
+            "name": "长老",
+            "type": "人物"
+          }
+        }
+      ],
+      "relationships": [
+        {
+          "source": "class",
+          "target": "grade",
+          "type": "FK",
+          "origin": null
+        },
+        {
+          "source": "student",
+          "target": "class",
+          "type": "FK",
+          "origin": null
+        },
+        {
+          "source": "subject",
+          "target": "grade",
+          "type": "FK",
+          "origin": null
+        },
+        {
+          "source": "subject_scores",
+          "target": "subject",
+          "type": "FK",
+          "origin": null
+        },
+        {
+          "source": "subject_scores",
+          "target": "student",
+          "type": "FK",
+          "origin": null
+        },
+        {
+          "source": "teacher",
+          "target": "class",
+          "type": "FK",
+          "origin": null
+        },
+        {
+          "source": "村姑",
+          "target": "长老",
+          "type": "送斋",
+          "origin": "extraction"
+        },
+        {
+          "source": "悟空",
+          "target": "唐僧",
+          "type": "师徒关系",
+          "origin": "extraction"
+        },
+        {
+          "source": "悟空",
+          "target": "老翁",
+          "type": "识破",
+          "origin": "extraction"
+        },
+        {
+          "source": "悟空",
+          "target": "老翁",
+          "type": "攻击",
+          "origin": "extraction"
+        },
+        {
+          "source": "悟空",
+          "target": "老妇",
+          "type": "识破",
+          "origin": "extraction"
+        },
+        {
+          "source": "悟空",
+          "target": "老妇",
+          "type": "攻击",
+          "origin": "extraction"
+        },
+        {
+          "source": "悟空",
+          "target": "村姑",
+          "type": "识破",
+          "origin": "extraction"
+        },
+        {
+          "source": "悟空",
+          "target": "村姑",
+          "type": "攻击",
+          "origin": "extraction"
+        },
+        {
+          "source": "唐僧",
+          "target": "悟空",
+          "type": "逐出师门",
+          "origin": "extraction"
+        },
+        {
+          "source": "唐僧",
+          "target": "悟空",
+          "type": "斥责",
+          "origin": "extraction"
+        },
+        {
+          "source": "唐僧",
+          "target": "悟空",
+          "type": "阻止",
+          "origin": "extraction"
+        },
+        {
+          "source": "八戒",
+          "target": "村姑",
+          "type": "评价",
+          "origin": "extraction"
+        },
+        {
+          "source": "老妇",
+          "target": "唐僧",
+          "type": "求助",
+          "origin": "extraction"
+        },
+        {
+          "source": "老翁",
+          "target": "长老",
+          "type": "求助",
+          "origin": "extraction"
+        },
+        {
+          "source": "沙僧",
+          "target": "唐僧",
+          "type": "劝说",
+          "origin": "extraction"
+        }
+      ]
+    }
+  },
+  {
+    "id": "7fc4ebc2-e2ba-4669-80ee-79e473c24d84",
+    "name": "嘿嘿白",
+    "description": "",
+    "entity_count": 12,
+    "relation_count": 16,
+    "created_at": "2026-04-21T10:36:13.138325",
+    "updated_at": "2026-04-21T10:38:22.538156",
+    "extraction_ids": [
+      "9f7c5124-39d1-489c-a3e0-617a56ef98df"
+    ],
+    "graph": {
+      "nodes": [
+        {
+          "id": "class",
+          "properties": {
+            "origin": "schema",
+            "name": "class",
+            "type": "Table"
+          }
+        },
+        {
+          "id": "grade",
+          "properties": {
+            "origin": "schema",
+            "name": "grade",
+            "type": "Table"
+          }
+        },
+        {
+          "id": "student",
+          "properties": {
+            "origin": "schema",
+            "name": "student",
+            "type": "Table"
+          }
+        },
+        {
+          "id": "subject",
+          "properties": {
+            "origin": "schema",
+            "name": "subject",
+            "type": "Table"
+          }
+        },
+        {
+          "id": "subject_scores",
+          "properties": {
+            "origin": "schema",
+            "name": "subject_scores",
+            "type": "Table"
+          }
+        },
+        {
+          "id": "teacher",
+          "properties": {
+            "origin": "schema",
+            "name": "teacher",
+            "type": "Table"
+          }
+        },
+        {
+          "id": "阿禾",
+          "properties": {
+            "occupation": "弟子",
+            "gender": "男",
+            "origin": "extraction",
+            "name": "阿禾",
+            "clothing": "麻布上衣（黄色），青色布料九分裤",
+            "type": "人物",
+            "age": 8
+          }
+        },
+        {
+          "id": "师父",
+          "properties": {
+            "occupation": "师父",
+            "gender": "男",
+            "origin": "extraction",
+            "name": "师父",
+            "type": "人物"
+          }
+        },
+        {
+          "id": "后山",
+          "properties": {
+            "origin": "extraction",
+            "name": "后山",
+            "type": "地点"
+          }
+        },
+        {
+          "id": "嫩竹",
+          "properties": {
+            "origin": "extraction",
+            "name": "嫩竹",
+            "type": "植物"
+          }
+        },
+        {
+          "id": "石坛",
+          "properties": {
+            "origin": "extraction",
+            "name": "石坛",
+            "type": "地点"
+          }
+        },
+        {
+          "id": "青竹峰",
+          "properties": {
+            "origin": "extraction",
+            "name": "青竹峰",
+            "type": "地点"
+          }
+        }
+      ],
+      "relationships": [
+        {
+          "source": "class",
+          "target": "grade",
+          "type": "FK",
+          "origin": null
+        },
+        {
+          "source": "student",
+          "target": "class",
+          "type": "FK",
+          "origin": null
+        },
+        {
+          "source": "subject",
+          "target": "grade",
+          "type": "FK",
+          "origin": null
+        },
+        {
+          "source": "subject_scores",
+          "target": "subject",
+          "type": "FK",
+          "origin": null
+        },
+        {
+          "source": "subject_scores",
+          "target": "student",
+          "type": "FK",
+          "origin": null
+        },
+        {
+          "source": "teacher",
+          "target": "class",
+          "type": "FK",
+          "origin": null
+        },
+        {
+          "source": "阿禾",
+          "target": "青竹峰",
+          "type": "所在",
+          "origin": "extraction"
+        },
+        {
+          "source": "阿禾",
+          "target": "师父",
+          "type": "行礼于",
+          "origin": "extraction"
+        },
+        {
+          "source": "阿禾",
+          "target": "石坛",
+          "type": "打坐于",
+          "origin": "extraction"
+        },
+        {
+          "source": "阿禾",
+          "target": "嫩竹",
+          "type": "照料",
+          "origin": "extraction"
+        },
+        {
+          "source": "阿禾",
+          "target": "嫩竹",
+          "type": "支撑",
+          "origin": "extraction"
+        },
+        {
+          "source": "阿禾",
+          "target": "后山",
+          "type": "被罚至",
+          "origin": "extraction"
+        },
+        {
+          "source": "阿禾",
+          "target": "师父",
+          "type": "师徒关系",
+          "origin": "extraction"
+        },
+        {
+          "source": "师父",
+          "target": "青竹峰",
+          "type": "所在",
+          "origin": "extraction"
+        },
+        {
+          "source": "师父",
+          "target": "阿禾",
+          "type": "望着",
+          "origin": "extraction"
+        },
+        {
+          "source": "师父",
+          "target": "石坛",
+          "type": "立于",
+          "origin": "extraction"
+        }
+      ]
+    }
   }
 ]

@@ -322,5 +322,27 @@
       "grade",
       "student"
     ]
+  },
+  {
+    "id": "66d2c10790ce430c9f433674c20361ce",
+    "kg_id": "fe80533c-b6d9-4470-824c-011f798a3f12",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student",
+      "subject",
+      "subject_scores",
+      "teacher"
+    ]
+  },
+  {
+    "id": "011a7daec955410498331599cd5294bc",
+    "kg_id": "7fc4ebc2-e2ba-4669-80ee-79e473c24d84",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade"
+    ]
   }
 ]

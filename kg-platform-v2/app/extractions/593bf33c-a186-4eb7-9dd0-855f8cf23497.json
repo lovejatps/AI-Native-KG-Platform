@@ -1,0 +1,88 @@
+{
+  "id": "593bf33c-a186-4eb7-9dd0-855f8cf23497",
+  "timestamp": "2026-04-21T10:00:57.496581Z",
+  "filename": "三打白骨精.md",
+  "graph": {
+    "nodes": [
+      {
+        "id": "村姑",
+        "properties": {
+          "occupation": "村姑",
+          "gender": "女",
+          "origin": "extraction",
+          "name": "村姑",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "悟空",
+        "properties": {
+          "occupation": "大圣",
+          "gender": "男",
+          "origin": "extraction",
+          "name": "悟空",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "唐僧",
+        "properties": {
+          "occupation": "和尚",
+          "gender": "男",
+          "origin": "extraction",
+          "name": "唐僧",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "八戒",
+        "properties": {
+          "occupation": "猪八戒",
+          "gender": "男",
+          "origin": "extraction",
+          "name": "八戒",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "沙僧",
+        "properties": {
+          "occupation": "沙僧",
+          "gender": "男",
+          "origin": "extraction",
+          "name": "沙僧",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "老妇",
+        "properties": {
+          "occupation": "老妇",
+          "gender": "女",
+          "origin": "extraction",
+          "name": "老妇",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "老翁",
+        "properties": {
+          "occupation": "老翁",
+          "gender": "男",
+          "origin": "extraction",
+          "name": "老翁",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "长老",
+        "properties": {
+          "origin": "extraction",
+          "name": "长老",
+          "type": "人物"
+        }
+      }
+    ],
+    "relationships": []
+  }
+}

@@ -29,26 +29,26 @@ class Neo4jClient:
         password = os.getenv("NEO4J_PASSWORD", "123456")
         # Configure driver with reasonable defaults – the driver manages a
         # connection pool internally.
-        try:
-            # Force IPv4 resolution to avoid ::1 (IPv6) fallback issues.
-            def ipv4_resolver(address):
-                host, port = address
-                return [("127.0.0.1", port)]
+        # Force IPv4 resolution to avoid ::1 (IPv6) fallback issues.
+        def ipv4_resolver(address):
+            host, port = address
+            return [("127.0.0.1", port)]
 
-            self.driver: Driver = GraphDatabase.driver(
-                uri,
-                auth=(user, password),
-                resolver=ipv4_resolver,
-                max_connection_lifetime=3600,  # 1 hour
-                max_connection_pool_size=50,
-                connection_acquisition_timeout=15,
-                encrypted=False,
-            )
+        self.driver: Driver = GraphDatabase.driver(
+            uri,
+            auth=(user, password),
+            resolver=ipv4_resolver,
+            max_connection_lifetime=3600,  # 1 hour
+            max_connection_pool_size=50,
+            connection_acquisition_timeout=15,
+            encrypted=False,
+        )
         # Verify connection at startup
-        with self.driver.session() as session:
-            session.run("RETURN 1")
-        # Connection succeeded – keep the driver for real Neo4j operations
-        self._fallback = False
+        try:
+            with self.driver.session() as session:
+                session.run("RETURN 1")
+            # Connection succeeded – keep the driver for real Neo4j operations
+            self._fallback = False
         except Exception as exc:
             # If Neo4j is unavailable, switch to fallback in‑memory mode.
             _logger.warning(

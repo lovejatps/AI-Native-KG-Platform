@@ -193,6 +193,7 @@ async def _process_and_store(
         print("[Background] Exporting graph snapshot")
         # ---- Export current graph snapshot ----
         try:
+            # Nodes
             node_records = neo.run("MATCH (n:Entity) RETURN n")  # type: ignore
             nodes = []
             for rec in node_records:
@@ -203,12 +204,9 @@ async def _process_and_store(
                     props = dict(n) if n else {}
                 nodes.append({"id": props.get("name"), "properties": props})
             print(f"[Background] Collected {len(nodes)} nodes")
-            # Gather relationships: if using real Neo4j, query them; otherwise fall back to in‑memory list
-            if getattr(neo, "_fallback", False):
-                relationships = neo._relationships.copy()
-                print(f"[Background] Collected {len(relationships)} relationships (fallback)")
-            else:
-                # Query real relationships from Neo4j
+
+            # Relationships (always query Neo4j; fallback on failure)
+            try:
                 rel_records = neo.run("MATCH (a:Entity)-[r]->(b:Entity) RETURN a.name AS source, b.name AS target, type(r) AS type, r.origin AS origin")
                 relationships = []
                 for rec in rel_records:
@@ -219,6 +217,11 @@ async def _process_and_store(
                         "origin": rec.get("origin"),
                     })
                 print(f"[Background] Collected {len(relationships)} relationships (real DB)")
+            except Exception as e_rel:
+                print(f"[Background] Relationship query failed ({e_rel}), using fallback list")
+                relationships = neo._relationships.copy()
+                print(f"[Background] Collected {len(relationships)} relationships (fallback)")
+
             graph_data = {"nodes": nodes, "relationships": relationships}
         except Exception as e:
             print(f"[Background] Neo4j node query failed ({e}), using empty node list")
@@ -379,13 +382,18 @@ def get_kg_detail(kg_id: str):
             # 如果图谱已存在，进行过滤
             graph = kg.get("graph")
             if graph:
-            # 过滤节点，只保留抽取(origin='extraction')的有效实体
+                # 过滤节点，只保留抽取(origin='extraction')的有效实体
                 filtered_nodes = []
                 for n in graph.get("nodes", []):
-                    props = n.get("properties", {})
-                    # 必须有 origin 且为 extraction，且 name 不是空或 'null'
-                    if props.get("origin") == "extraction" and props.get("name") and props.get("name") != "null":
-                        filtered_nodes.append(n)
+                    # Nodes may be stored either as {'properties': {...}} (extraction) or flat {'id','name','type'} (schema)
+                    if "properties" in n:
+                        props = n["properties"]
+                        # 必须有 origin 且为 extraction，且 name 不是空或 'null'
+                        if props.get("origin") == "extraction" and props.get("name") and props.get("name") != "null":
+                            filtered_nodes.append(n)
+                    else:
+                        # Schema node – skip it
+                        continue
                 # 过滤关系，仅保留两端节点都在 filtered_nodes 中的关系
                 valid_names = {n.get("properties", {}).get("name") for n in filtered_nodes}
                 filtered_rels = []
@@ -399,6 +407,38 @@ def get_kg_detail(kg_id: str):
                         filtered_rels.append(rel)
                 kg["graph"] = {"nodes": filtered_nodes, "relationships": filtered_rels}
             return kg
+    raise HTTPException(status_code=404, detail="KG not found")
+
+# ----------------------------------------------------------
+# KG Graph endpoint (filtered for front‑end viewer)
+# ----------------------------------------------------------
+@router.get("/kg/{kg_id}/graph")
+def get_kg_graph(kg_id: str):
+    """返回只包含抽取数据的图谱（用于 `graph_view` 前端）。"""
+    from ..core.kg_store import _load_all
+    for kg in _load_all():
+        if kg["id"] == kg_id:
+            graph = kg.get("graph")
+            if not graph:
+                raise HTTPException(status_code=404, detail="Graph not found")
+            # 过滤节点仅保留 extraction
+            filtered_nodes = []
+            for n in graph.get("nodes", []):
+                if "properties" in n:
+                    props = n["properties"]
+                    if props.get("origin") == "extraction" and props.get("name") and props.get("name") != "null":
+                        filtered_nodes.append(n)
+            # 过滤关系，仅当双方均在抽取节点集合中且非 schema
+            valid_names = {n.get("properties", {}).get("name") for n in filtered_nodes}
+            filtered_rels = []
+            for rel in graph.get("relationships", []):
+                if rel.get("origin") == "schema":
+                    continue
+                src = rel.get("source")
+                tgt = rel.get("target")
+                if src in valid_names and tgt in valid_names:
+                    filtered_rels.append(rel)
+            return {"graph": {"nodes": filtered_nodes, "edges": filtered_rels}}
     raise HTTPException(status_code=404, detail="KG not found")
 
 @router.get("/kg/{kg_id}/export")
