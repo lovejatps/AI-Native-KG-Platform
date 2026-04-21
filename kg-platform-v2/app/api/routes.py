@@ -203,9 +203,22 @@ async def _process_and_store(
                     props = dict(n) if n else {}
                 nodes.append({"id": props.get("name"), "properties": props})
             print(f"[Background] Collected {len(nodes)} nodes")
-            # Gather relationships from fallback store (captured during upserts)
-            relationships = neo._relationships.copy()
-            print(f"[Background] Collected {len(relationships)} relationships (fallback)")
+            # Gather relationships: if using real Neo4j, query them; otherwise fall back to in‑memory list
+            if getattr(neo, "_fallback", False):
+                relationships = neo._relationships.copy()
+                print(f"[Background] Collected {len(relationships)} relationships (fallback)")
+            else:
+                # Query real relationships from Neo4j
+                rel_records = neo.run("MATCH (a:Entity)-[r]->(b:Entity) RETURN a.name AS source, b.name AS target, type(r) AS type, r.origin AS origin")
+                relationships = []
+                for rec in rel_records:
+                    relationships.append({
+                        "source": rec.get("source"),
+                        "target": rec.get("target"),
+                        "type": rec.get("type"),
+                        "origin": rec.get("origin"),
+                    })
+                print(f"[Background] Collected {len(relationships)} relationships (real DB)")
             graph_data = {"nodes": nodes, "relationships": relationships}
         except Exception as e:
             print(f"[Background] Neo4j node query failed ({e}), using empty node list")
