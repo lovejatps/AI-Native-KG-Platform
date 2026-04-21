@@ -44,12 +44,11 @@ class Neo4jClient:
                 connection_acquisition_timeout=15,
                 encrypted=False,
             )
-            # Verify connection at startup
-            with self.driver.session() as session:
-                session.run("RETURN 1")
-            # Prefer fallback in-memory store for testing environments
-            self.driver = None
-            self._fallback = True
+        # Verify connection at startup
+        with self.driver.session() as session:
+            session.run("RETURN 1")
+        # Connection succeeded – keep the driver for real Neo4j operations
+        self._fallback = False
         except Exception as exc:
             # If Neo4j is unavailable, switch to fallback in‑memory mode.
             _logger.warning(
@@ -75,7 +74,12 @@ class Neo4jClient:
 
         Returns a list of record dictionaries for convenience.
         """
-        if getattr(self, "_fallback", False) or self.driver is None:
+        if not getattr(self, "_fallback", False) and self.driver is not None:
+            # Real Neo4j connection: execute query directly
+            with self.driver.session() as session:
+                result = session.run(query, params)
+                return [record.data() for record in result]
+        else:
             # --- In‑memory fallback handling ---
             # Node MERGE
             if query.strip().startswith("MERGE") and params:
