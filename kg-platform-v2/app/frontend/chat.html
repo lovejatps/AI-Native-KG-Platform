@@ -17,13 +17,22 @@
             if (!text) return;
             appendMessage('user', text);
             input.value = '';
-            const resp = await fetch('/chat/message', {
+            // Ensure a session ID exists (stored in localStorage)
+            let sessionId = localStorage.getItem('chatSessionId');
+            if (!sessionId) {
+                // Simple UUID v4 generator (no external libs)
+                sessionId = ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c=>
+                    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+                );
+                localStorage.setItem('chatSessionId', sessionId);
+            }
+            const resp = await fetch('/chat', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({message: text})
+                body: JSON.stringify({session_id: sessionId, message: text})
             });
             const data = await resp.json();
-            appendMessage('bot', data.reply);
+            appendMessage('bot', data.response);
         }
         function appendMessage(cls, text) {
             const chat = document.getElementById('chat');

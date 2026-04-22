@@ -20,7 +20,80 @@ from fastapi.responses import (
 )
 
 
+router = APIRouter()
 # Simple dummy agent for /chat endpoint (placeholder implementation)
+
+# ---------------------------------------------------------------------
+# Chat endpoint with context management (new feature)
+# ---------------------------------------------------------------------
+
+from ..core.chat_context import ChatContextManager
+from ..core.llm import llm
+from ..core.logger import get_logger
+from typing import Dict, Any
+
+chat_manager = ChatContextManager()
+
+@router.post("/chat")
+async def chat_endpoint(payload: Dict[str, Any]):
+    _log = get_logger(__name__)
+    _log.info("Received chat request", payload=payload)
+    """Accept a user message and return LLM response.
+
+    Expected JSON payload::
+
+        {"session_id": "unique-id", "message": "Hello"}
+
+    The function stores the user message, builds a context window (last 10
+    messages), calls the LLM, stores the assistant reply, and returns it.
+    """
+    session_id = payload.get("session_id")
+    user_msg = payload.get("message")
+    if not session_id or not isinstance(user_msg, str):
+        raise HTTPException(status_code=400, detail="Missing session_id or message")
+
+    # Store user message
+    chat_manager.add_message(session_id, "user", user_msg)
+
+    # Build context for LLM (last 10 messages)
+    context = chat_manager.get_context(session_id, limit=10)
+    _log.info("Chat context prepared", context=context)
+
+    # Call LLM – we use the direct VLLM chat helper which expects a list of messages
+    response = llm.chat_vllm_direct(context)
+
+    # Store assistant reply for future rounds
+    chat_manager.add_message(session_id, "assistant", response)
+
+    _log.info("Chat response sent", response=response)
+    return {"response": response}
+
+@router.post("/chat/stream")
+async def chat_stream_endpoint(payload: Dict[str, Any]):
+    _log = get_logger(__name__)
+    _log.info("Received streaming chat request", payload=payload)
+    session_id = payload.get("session_id")
+    user_msg = payload.get("message")
+    if not session_id or not isinstance(user_msg, str):
+        raise HTTPException(status_code=400, detail="Missing session_id or message")
+    # Store user message
+    chat_manager.add_message(session_id, "user", user_msg)
+    # Build context (last 10 messages)
+    context = chat_manager.get_context(session_id, limit=10)
+    _log.info("Chat context prepared for streaming", context=context)
+
+    async def generator():
+        # Stream chunks from LLM and accumulate full response
+        full_resp = ""
+        for chunk in llm.chat_vllm_stream(context):
+            full_resp += chunk
+            yield chunk
+        # Store the assistant reply after streaming completes
+        chat_manager.add_message(session_id, "assistant", full_resp)
+        _log.info("Streaming chat response stored", response=full_resp)
+
+    return StreamingResponse(generator(), media_type="text/event-stream")
+
 class DummyAgent:
     def run(self, message: str) -> str:
         return f"Echo: {message}"
@@ -37,7 +110,7 @@ import tempfile
 import shutil
 from ..core.models_store import list_models
 
-router = APIRouter()
+# router definition moved up (see earlier)
 
 # Import KG utilities
 from ..core.kg_store import list_kgs

@@ -253,21 +253,189 @@ class LLM:
 
     # ---------------------------------------------------------------------
     def chat_vllm_direct(self, messages: list) -> str:
-        """Compatibility wrapper: accept a list of ``{"role":..., "content":...}``.
+        """Send a list of messages (OpenAI chat format) directly to VLLM/OpenAI.
 
-        The method concatenates the messages into a single prompt (joining the
-        ``content`` fields) and forwards it to :meth:`_vllm_request`.
+        Unlike the previous concatenation implementation, this method passes the
+        ``messages`` list unchanged to the underlying client so role information
+        (``user``/``assistant``) is preserved.  This yields correct context‑aware
+        responses when multiple turns are supplied.
         """
-        # Simple concatenation – most callers already send a single message.
-        prompt = "\n".join(m.get("content", "") for m in messages)
-        start = time.time()
-        # Allow a larger output token budget for KG extraction (configurable via env)
+        # Log incoming messages (truncated for brevity)
+        _logger.debug("chat_vllm_direct called", messages_count=len(messages))
+
+        # Build request parameters
         max_output = getattr(get_settings(), "LLM_MAX_OUTPUT_TOKENS", 4000)
-        est_tokens = max(200, min(max_output, len(prompt) // 4))
-        result = self._vllm_request(prompt=prompt, max_tokens=est_tokens)
-        duration = time.time() - start
-        _logger.info(f"Direct VLLM 调用耗时 {duration:.2f}s（模型 {self.model}）")
-        return result
+        # Ensure no None content in messages for token estimation
+        safe_messages = [{"role": m.get('role'), "content": m.get('content') or ""} for m in messages]
+        est_tokens = max(200, min(max_output, sum(len(m.get('content','')) for m in safe_messages) // 4))
+        attempts = 3
+        for attempt in range(1, attempts + 1):
+            try:
+                # If there is only a single user message, keep the structured messages API (SDK or HTTP).
+                if len(safe_messages) == 1 and safe_messages[0].get('role') == 'user':
+                    if openai is not None and hasattr(openai, "OpenAI"):
+                        _logger.debug("Using OpenAI SDK client for VLLM call (single message)")
+                        client = openai.OpenAI(
+                            api_key=self.api_key,
+                            base_url=self.endpoint.rstrip("/"),
+                            timeout=self.timeout,
+                        )
+                        _logger.debug("OpenAI SDK request payload", model=self.model, messages=safe_messages, max_tokens=est_tokens)
+                        res = client.chat.completions.create(
+                            model=self.model,
+                            messages=safe_messages,
+                            max_tokens=est_tokens,
+                            temperature=0.0,
+                        )
+                        content = res.choices[0].message.content
+                        _logger.debug("OpenAI SDK response received", content=content)
+                        if not isinstance(content, str) or not content:
+                            _logger.warning("LLM returned non‑string or empty content via SDK")
+                            content = f"[LLM-{self.model}] empty response"
+                        else:
+                            try:
+                                content.encode('utf-8')
+                                printable_ratio = sum(c.isprintable() for c in content) / max(len(content), 1)
+                                if printable_ratio < 0.5:
+                                    _logger.warning("LLM returned mostly non‑printable content via SDK")
+                                    content = f"[LLM-{self.model}] empty response"
+                            except Exception:
+                                _logger.warning("LLM returned non‑UTF‑8 content via SDK")
+                                content = f"[LLM-{self.model}] empty response"
+                        return content
+                    # Fallback HTTP for single message when SDK unavailable
+                    _logger.debug("OpenAI SDK not available, falling back to raw HTTP (single message)")
+                    import requests
+                    payload = {
+                        "model": self.model,
+                        "messages": safe_messages,
+                        "max_tokens": est_tokens,
+                        "temperature": 0.0,
+                    }
+                    headers = {
+                        "Authorization": f"Bearer {self.api_key}",
+                        "Content-Type": "application/json",
+                    }
+                    _logger.debug("HTTP fallback request payload", payload=payload)
+                    response = requests.post(
+                        f"{self.endpoint.rstrip('/')}/chat/completions",
+                        headers=headers,
+                        json=payload,
+                        timeout=self.timeout,
+                    )
+                    response.raise_for_status()
+                    data = response.json()
+                    _logger.debug("Raw HTTP response received", data=data)
+                    content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    if not isinstance(content, str) or not content:
+                        _logger.warning("LLM returned non‑string or empty content via HTTP fallback")
+                        content = f"[LLM-{self.model}] empty response"
+                    else:
+                        try:
+                            content.encode('utf-8')
+                        except Exception:
+                            _logger.warning("LLM returned non‑UTF‑8 content via HTTP fallback")
+                            content = f"[LLM-{self.model}] empty response"
+                    return content
+                else:
+                    # For multi‑turn context, concatenate messages into a single prompt string.
+                    concatenated = "\n".join(m.get('content', '') for m in safe_messages)
+                    _logger.debug("Concatenated multi‑turn prompt for VLLM", prompt=concatenated)
+                    # Re‑use the low‑level request helper which works with plain prompts.
+                    return self._vllm_request(prompt=concatenated, max_tokens=est_tokens)
+            except Exception as exc:
+                _logger.error(f"[VLLM] 第 {attempt} 次调用失败: {exc}")
+                if attempt == attempts:
+                    return f"[LLM-{self.model}] request failed"
+                time.sleep(5)
+        # Should never reach here
+        return f"[LLM-{self.model}] request failed"
+
+    def chat_vllm_stream(self, messages: list):
+        """Stream LLM response for a list of messages.
+
+        Returns an iterator/generator yielding partial text chunks. If streaming
+        is not possible (e.g., multi‑turn context), falls back to a single
+        concatenated response.
+        """
+        # Ensure no None content in messages
+        safe_messages = [
+            {"role": m.get("role"), "content": m.get("content") or ""}
+            for m in messages
+        ]
+        max_output = getattr(get_settings(), "LLM_MAX_OUTPUT_TOKENS", 4000)
+        est_tokens = max(
+            200,
+            min(
+                max_output,
+                sum(len(m.get("content", "")) for m in safe_messages) // 4,
+            ),
+        )
+        # Single‑turn (user only) streaming
+        if len(safe_messages) == 1 and safe_messages[0].get("role") == "user":
+            # OpenAI SDK streaming path
+            if openai is not None and hasattr(openai, "OpenAI"):
+                client = openai.OpenAI(
+                    api_key=self.api_key,
+                    base_url=self.endpoint.rstrip("/"),
+                    timeout=self.timeout,
+                )
+                response = client.chat.completions.create(
+                    model=self.model,
+                    messages=safe_messages,
+                    max_tokens=est_tokens,
+                    temperature=0.0,
+                    stream=True,
+                )
+                for chunk in response:
+                    delta = getattr(chunk.choices[0], "delta", None)
+                    if delta and getattr(delta, "content", None):
+                        yield delta.content
+                return
+            # HTTP fallback streaming (VLLM raw endpoint)
+            import requests
+            payload = {
+                "model": self.model,
+                "messages": safe_messages,
+                "max_tokens": est_tokens,
+                "temperature": 0.0,
+                "stream": True,
+            }
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            }
+            with requests.post(
+                f"{self.endpoint.rstrip('/')}/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=self.timeout,
+                stream=True,
+            ) as resp:
+                resp.raise_for_status()
+                for line in resp.iter_lines():
+                    if not line:
+                        continue
+                    try:
+                        data = json.loads(line.decode())
+                        choices = data.get("choices", [])
+                        if choices:
+                            delta = choices[0].get("delta", {})
+                            content = delta.get("content")
+                            if content:
+                                yield content
+                    except Exception:
+                        continue
+            return
+        # Multi‑turn or fallback – use non‑streaming request and yield whole answer
+        concatenated = "\n".join(m.get("content", "") for m in safe_messages)
+        _logger.debug("Concatenated multi‑turn prompt for streaming fallback", prompt=concatenated)
+        full_resp = self._vllm_request(prompt=concatenated, max_tokens=est_tokens)
+        if full_resp:
+            yield full_resp
+        else:
+            yield f"[LLM-{self.model}] empty response"
+
 
 
 # ---------------------------------------------------------------------

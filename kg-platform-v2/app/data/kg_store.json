@@ -773,5 +773,29 @@
     "entity_count": 0,
     "relation_count": 0,
     "created_at": "2026-04-22T03:30:22.317886"
+  },
+  {
+    "id": "77a203ab-04cc-4e19-8ecd-40b2d20dc7e5",
+    "name": "testkg",
+    "description": "test",
+    "entity_count": 0,
+    "relation_count": 0,
+    "created_at": "2026-04-22T09:58:15.522093"
+  },
+  {
+    "id": "0ae38e6c-d3c7-4303-bbc7-b49f49790577",
+    "name": "testkg",
+    "description": "test",
+    "entity_count": 0,
+    "relation_count": 0,
+    "created_at": "2026-04-22T09:58:36.769982"
+  },
+  {
+    "id": "8ce012b7-cf90-4d63-8fe9-0952b4924441",
+    "name": "testkg",
+    "description": "test",
+    "entity_count": 0,
+    "relation_count": 0,
+    "created_at": "2026-04-22T09:58:36.857022"
   }
 ]
