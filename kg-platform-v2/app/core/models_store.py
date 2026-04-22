@@ -260,7 +260,7 @@ def generate_schema_for_kg(kg_id: str) -> Dict[str, Any]:
     """
     # 1️⃣ 读取 KG ↔ DataSource 链接
     from ..core.kg_datasource_store import list_links
-    from ..core.datasource_store import get_schema
+    from ..core.datasource_store import get_schema, get_datasource
     from ..core.llm import llm  # LLM 用于生成列描述
 
     links = list_links(kg_id)
@@ -298,15 +298,21 @@ def generate_schema_for_kg(kg_id: str) -> Dict[str, Any]:
                     description = llm.chat(prompt).strip()
                 except Exception as e:
                     description = f"列 {col_name}（类型 {col_type}）"  # 兜底
+                # Retrieve datasource info for full source path
+                ds_info = get_datasource(ds_id)
+                system_name = ds_info.get("system_name", "") if ds_info else ""
+                database_name = ds_info.get("database") or ds_info.get("system_name", "") if ds_info else ""
+                source_path = f"{system_name}|{database_name}|{tbl_name}|{col_name}"
                 column_props.append({
                     "name": col_name,
                     "type": col_type,
                     "comment": col_comment,
                     "description": description,
+                    "source_column": source_path,
                 })
             # 5️⃣ 合并到实体 map（按表名合并）
             if tbl_name not in entity_map:
-                entity_map[tbl_name] = {"name": tbl_name, "type": "Table", "properties": column_props}
+                entity_map[tbl_name] = {"name": tbl_name, "type": "Node", "properties": column_props, "metadata": {"semanticName": tbl_name}}
             else:
                 # 合并列，防止重复列名
                 existing_props = {p["name"] for p in entity_map[tbl_name]["properties"]}

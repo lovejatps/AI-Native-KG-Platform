@@ -18,17 +18,17 @@
 </head>
 <body>
   <!-- 原始字段映射弹窗 -->
-  <div id="fieldMapModal" class="modal">
-    <div class="modal-content">
-      <h3>映射原始字段</h3>
-      <label>系统: <select id="fieldSystem" required></select></label><br><br>
-      <label>数据库: <select id="fieldDatabase" required></select></label><br><br>
-      <label>表: <select id="fieldTable" required></select></label><br><br>
-      <label>属性: <select id="fieldColumn" required></select></label><br><br>
-      <button onclick="confirmFieldMap()">确定</button>
-      <button onclick="closeFieldMapModal()">取消</button>
-    </div>
+<div id="fieldMapModal" class="modal">
+  <div class="modal-content">
+    <h3>映射原始字段</h3>
+    <label>系统: <select id="fieldSystem" required></select></label><br><br>
+    <label>数据库: <select id="fieldDatabase" required></select></label><br><br>
+    <label>表: <select id="fieldTable" required></select></label><br><br>
+    <label>属性: <select id="fieldColumn" required></select></label><br><br>
+    <button onclick="confirmFieldMap()">确定</button>
+    <button onclick="closeFieldMapModal()">取消</button>
   </div>
+</div>
   <!-- 顶部栏（关键控制区） -->
   <div style="padding:8px; background:#f5f5f5; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd;">
     <div>数据源：<span id="dataSourceInfo">车队系统</span> | Schema版本：<span id="schemaVersionInfo">v1.2</span></div>
@@ -255,11 +255,19 @@ async function loadSchemaForDatasource(dsId) {
     tables.forEach(t => {
       const tName = t.name;
       databaseTables[tName] = [];
-      t.columns.forEach(col => {
-        const cName = col.name;
-        databaseTables[tName].push(cName);
-        tableColumns[`${tName}.${cName}`] = {name: cName, type: col.type, comment: col.comment};
-      });
+        t.columns.forEach(col => {
+          const cName = col.name;
+          // 完整路径：system|database|table|column（用于属性映射）
+const sysElem = document.getElementById('fieldSystem');
+            const dbElem = document.getElementById('fieldDatabase');
+            const sys = sysElem ? sysElem.value : '';
+            const db = dbElem ? dbElem.value : '';
+          const fullPath = `${sys}|${db}|${tName}|${cName}`;
+          // 表下拉仍使用列名列表（保持 UI 预期）
+          databaseTables[tName].push(cName);
+          // 记录列的完整路径，供属性映射使用
+          tableColumns[fullPath] = {name: cName, type: col.type, comment: col.comment, system: sys, database: db, table: tName};
+        });
     });
   } catch (e) {
     console.error('Failed to load schema', e);
@@ -271,25 +279,25 @@ async function openMapFieldModal(entity, idx) {
   fieldMapContext = {entity, idx};
   // Ensure data sources are loaded
   if (availableSystems.length === 0) await loadDataSources();
-  const systemSelect = document.getElementById('fieldSystem');
+  const sysSelect = document.getElementById('fieldSystem');
   const dbSelect = document.getElementById('fieldDatabase');
-  const tableSelect = document.getElementById('fieldTable');
-  const columnSelect = document.getElementById('fieldColumn');
+  const tblSelect = document.getElementById('fieldTable');
+  const colSelect = document.getElementById('fieldColumn');
   // Clear previous options
-  systemSelect.innerHTML = '';
+  sysSelect.innerHTML = '';
   dbSelect.innerHTML = '';
-  tableSelect.innerHTML = '';
-  columnSelect.innerHTML = '';
+  tblSelect.innerHTML = '';
+  colSelect.innerHTML = '';
   // Populate systems
   availableSystems.forEach(s => {
     const opt = document.createElement('option');
     opt.value = s;
     opt.textContent = s;
-    systemSelect.appendChild(opt);
+    sysSelect.appendChild(opt);
   });
-  // System change handler – populate databases and load schema for first db
-  systemSelect.onchange = async () => {
-    const sys = systemSelect.value;
+  // System change -> load databases
+  sysSelect.onchange = async () => {
+    const sys = sysSelect.value;
     const dbs = systemDatabases[sys] || [];
     dbSelect.innerHTML = '';
     dbs.forEach(d => {
@@ -298,13 +306,11 @@ async function openMapFieldModal(entity, idx) {
       opt.textContent = d;
       dbSelect.appendChild(opt);
     });
-    if (dbs.length) {
-      dbSelect.dispatchEvent(new Event('change'));
-    }
+    if (dbs.length) dbSelect.dispatchEvent(new Event('change'));
   };
-  // Database change handler – load tables/columns for that datasource
+  // Database change -> load tables (schema)
   dbSelect.onchange = async () => {
-    const sys = systemSelect.value;
+    const sys = sysSelect.value;
     const db = dbSelect.value;
     const dsId = dsIdMap[`${sys}|${db}`];
     if (!dsId) {
@@ -313,29 +319,29 @@ async function openMapFieldModal(entity, idx) {
     }
     await loadSchemaForDatasource(dsId);
     // Populate tables
-    tableSelect.innerHTML = '';
+    tblSelect.innerHTML = '';
     Object.keys(databaseTables).forEach(t => {
       const opt = document.createElement('option');
       opt.value = t;
       opt.textContent = t;
-      tableSelect.appendChild(opt);
+      tblSelect.appendChild(opt);
     });
-    if (Object.keys(databaseTables).length) tableSelect.dispatchEvent(new Event('change'));
+    if (Object.keys(databaseTables).length) tblSelect.dispatchEvent(new Event('change'));
   };
-  // Table change handler – populate columns
-  tableSelect.onchange = () => {
-    const t = tableSelect.value;
+  // Table change -> populate columns
+  tblSelect.onchange = () => {
+    const t = tblSelect.value;
     const cols = databaseTables[t] || [];
-    columnSelect.innerHTML = '';
+    colSelect.innerHTML = '';
     cols.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c;
       opt.textContent = c;
-      columnSelect.appendChild(opt);
+      colSelect.appendChild(opt);
     });
   };
   // Initialize first level
-  if (availableSystems.length) systemSelect.dispatchEvent(new Event('change'));
+  if (availableSystems.length) sysSelect.dispatchEvent(new Event('change'));
   // Show modal
   document.getElementById('fieldMapModal').style.display = 'block';
 }
@@ -353,9 +359,10 @@ function confirmFieldMap() {
     alert('请选择系统、数据库、表和属性');
     return;
   }
+  const fullPath = `${system}|${database}|${table}|${column}`;
   const {entity, idx} = fieldMapContext;
   if (entity && typeof idx === 'number') {
-    entityProps[entity][idx].origField = `${system}.${database}.${table}.${column}`;
+    entityProps[entity][idx].origField = fullPath;
     showPropertyPanel(entity);
   }
   closeFieldMapModal();
@@ -390,32 +397,38 @@ function closeEditor() {
     // ---------------------------------------------------------------
     // ---------- 实体/属性面板相关数据结构 & 方法 -------------------
     // ---------------------------------------------------------------
-    let originalSchema = null;   // 用于 diff 计算
-    let entityProps = {};          // {entityName: [{origField, semantic, type, visible}] 
-    let currentEntity = null;     // 当前选中的实体名称
+let originalSchema = null;   // 用于 diff 计算
+      let entityProps = {};          // {entityName: [{origField, semantic, type, visible}] 
+      let entitySemanticNames = {}; // {entityName: semanticName}
+      // 新增：记录实体关联的数据源（系统-数据库-表）
+      let entityDataSources = {};   // {entityName: {system, database, table}}
+      let currentEntity = null;     // 当前选中的实体名称
 
     // 从后端加载的 schema 同时初始化属性映射并渲染实体列表
-    function initFromSchema(schema) {
-      originalSchema = JSON.parse(JSON.stringify(schema)); // 深拷贝留作 diff
-      const entities = schema.entities || [];
-      const relations = schema.relations || [];
+function initFromSchema(schema) {
+       originalSchema = JSON.parse(JSON.stringify(schema)); // 深拷贝留作 diff
+       const entities = schema.entities || [];
+       const relations = schema.relations || [];
 
-      // 初始化属性映射
-      entityProps = {};
-      entities.forEach(e => {
-        // 默认把后端的属性映射为 semantic 与原始相同，type 暂定为 string，默认展示
-        const props = (e.properties || []).map(p => ({
-          // Use the source column as the original field if provided, otherwise fall back to the displayed name
-          origField: p.source_column || p.name,
-          // The displayed (semantic) name is always the 'name' field in the schema
-          semantic: p.name,
-          type: p.type || 'string',
-          visible: true,
-        }));
-        entityProps[e.name] = props;
-      });
-      renderEntityList();
-    }
+       // 初始化属性映射
+       entityProps = {};
+       entities.forEach(e => {
+         const props = (e.properties || []).map(p => ({
+           origField: p.source_column || p.name,
+           semantic: p.name,
+           type: p.type || 'string',
+           visible: true,
+         }));
+         entityProps[e.name] = props;
+         // 恢复 semanticName
+         let semanticName = e.name;
+         if (e.metadata && typeof e.metadata.semanticName === 'string') {
+           semanticName = e.metadata.semanticName;
+         }
+         entitySemanticNames[e.name] = semanticName;
+       });
+       renderEntityList();
+     }
 
     // 渲染左侧实体列表
     function renderEntityList() {
@@ -432,27 +445,50 @@ const li = document.createElement('li');
       });
     }
 
-    // 创建新实体（同时在 graph 中创建节点）
-    function createEntity() {
-      const name = prompt('请输入实体名称');
-      if (!name) return;
-      // 防止重复
-      if (entityProps[name]) { alert('实体已存在'); return; }
-      // 在图谱中添加节点（默认位置在左上）
-      const cnt = graph.getNodes().length;
-      const node = graph.addNode({
-        x: 50 + (cnt % 4) * 200,
-        y: 50 + Math.floor(cnt / 4) * 150,
-        width: 150,
-        height: 80,
-        label: name,
-        attrs: { body: { stroke: '#5F95FF', fill: '#EFF4FF' } },
-      });
-      // 初始化空属性
-      entityProps[name] = [];
-      renderEntityList();
+    // 兼容旧调用：点击 “+ 新建实体” 时打开完整的新增实体弹窗
+    function createEntity(){
+        openAddEntityModal();
     }
-
+    // ------------------------------------------------------------
+    // 新增实体弹窗相关函数（系统/数据库/表三层下拉）
+    // ------------------------------------------------------------
+    /** 打开新增实体弹窗 */
+    async function openAddEntityModal() {
+        // 清空语义输入框
+        document.getElementById('newEntitySemantic').value = '';
+        // 直接展示弹窗，无需加载系统/数据库/表信息
+        document.getElementById('modalOverlay').style.display = 'block';
+        document.getElementById('addEntityModal').style.display = 'block';
+    }
+    /** 关闭新增实体弹窗 */
+    function closeAddEntityModal() {
+        document.getElementById('addEntityModal').style.display = 'none';
+        document.getElementById('modalOverlay').style.display = 'none';
+    }
+    /** 确认新增实体 */
+    function confirmAddEntity() {
+        const semanticInput = document.getElementById('newEntitySemantic').value.trim();
+        // 使用语义名称或自动生成的唯一名称作为实体标识
+        const name = semanticInput || `Entity_${Date.now()}`;
+        if (entityProps[name]) { alert('实体已存在'); return; }
+        const semantic = semanticInput || name; // 语义名称若未填写则使用生成的名称
+        // 创建节点
+        const cnt = graph.getNodes().length;
+        const node = graph.addNode({
+            x: 50 + (cnt % 4) * 200,
+            y: 50 + Math.floor(cnt / 4) * 150,
+            width: 150,
+            height: 80,
+            label: name,
+            attrs: { body: { stroke: '#5F95FF', fill: '#EFF4FF' } },
+        });
+        // 初始化空属性列表
+        entityProps[name] = [];
+        // 设置语义名称
+        entitySemanticNames[name] = semantic;
+        renderEntityList();
+        closeAddEntityModal();
+    }
     // 通过左侧列表点击选中实体并在画布上高亮
     function selectEntityFromList(name) {
       const node = graph.getNodes().find(n => n.getLabel() === name);
@@ -481,6 +517,13 @@ const li = document.createElement('li');
       panel.style.display = 'block';
       const props = entityProps[name] || [];
       let html = `<h4>${name}</h4>`;
+        // 实体语义名称输入框（默认与实体名称相同）
+        const entitySemantic = entitySemanticNames[name] || name;
+        html += `<div style="margin:8px 0;">
+          实体语义名称：
+          <input type="text" id="entitySemantic-${name}" value="${entitySemantic}" 
+                 style="width:200px;" onchange="updateEntitySemantic('${name}', this.value)" />
+        </div>`;
       html += `<table style="width:100%; border-collapse:collapse;">
                 <tr><th>原始字段</th><th>语义名</th><th>类型</th><th>展示</th><th>操作</th></tr>`;
       props.forEach((p, idx) => {
@@ -506,6 +549,12 @@ const li = document.createElement('li');
       const prop = arr[idx];
       if (field === 'visible') prop[field] = !!value;
       else prop[field] = value;
+    }
+
+    // 更新实体语义名称（全局映射）
+    function updateEntitySemantic(entity, newSemantic) {
+      if (!entity) return;
+      entitySemanticNames[entity] = newSemantic;
     }
 
     // 删除属性行
@@ -565,10 +614,14 @@ const entities = nodes.map(node => {
         type: p.type || 'string',
         source_column: p.origField,
       }));
-      return {
-        name: node.getLabel(),
-        properties: schemaProps,
-      };
+return {
+                     name: node.getLabel(),
+                     properties: schemaProps,
+// Preserve semantic name (metadata.semanticName) for entity UI
+                    metadata: {
+                       semanticName: entitySemanticNames[node.getLabel()] || node.getLabel()
+                     },
+                   };
     });
 // DEBUG: log edges before extracting relations
           console.log('Saving: edges from graph', edges);
@@ -632,6 +685,26 @@ const entities = nodes.map(node => {
         })
         .catch(err => alert('网络错误: ' + err));
     }
+
+    // ---------------------------------------------------------------
+    // 新增实体弹窗（动态创建）
+    // ---------------------------------------------------------------
+    // Modal overlay
+    const modalOverlayDiv = document.createElement('div');
+    modalOverlayDiv.id = 'modalOverlay';
+    modalOverlayDiv.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.3);z-index:999';
+    document.body.appendChild(modalOverlayDiv);
+    // Modal container
+    const modalDiv = document.createElement('div');
+    modalDiv.id = 'addEntityModal';
+    modalDiv.style.cssText = 'display:none;position:fixed;top:20%;left:50%;transform:translateX(-50%);background:#fff;padding:20px;border:1px solid #ccc;z-index:1000;max-width:400px;box-shadow:0 2px 8px rgba(0,0,0,0.2)';
+modalDiv.innerHTML = `
+        <h3>新增实体</h3>
+        <div style=\"margin:8px 0;\">实体语义名称：<input id=\"newEntitySemantic\" type=\"text\" style=\"width:200px;\"/></div>
+        <button onclick=\"confirmAddEntity()\">确定</button>
+        <button onclick=\"closeAddEntityModal()\">取消</button>
+    `;
+    document.body.appendChild(modalDiv);
 
     // 发布、回滚占位函数（后端未实现，先提示）
     function publishModel() { alert('发布功能待实现'); }

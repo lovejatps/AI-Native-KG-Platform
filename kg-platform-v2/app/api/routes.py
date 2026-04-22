@@ -125,11 +125,17 @@ async def ingest_document(payload: Dict[str, Any]):
         Neo4jClient._store[name] = {"name": name}
         if fallback_name and fallback_name != name:
             Neo4jClient._store[fallback_name] = {"name": fallback_name}
+        # Ensure node exists in Neo4j (real or fallback)
+        client = Neo4jClient()
+        client.run("MERGE (e:Entity {name: $name})", {"name": name})
     except Exception:
         name = "Unnamed"
         content = ""
-    # Directly store entity in fallback store (shared across instances)
-    Neo4jClient._store[name] = {"name": name}
+        # Directly store entity in fallback store (shared across instances)
+        Neo4jClient._store[name] = {"name": name}
+        # Ensure node exists in the (fallback or real) Neo4j store
+        client = Neo4jClient()
+        client.run("MERGE (e:Entity {name: $name})", {"name": name})
     # Insert a placeholder vector for the processed chunk to satisfy integration test
     from app.rag.vector_store import VectorStore
     from app.core.incremental import _hash_text
@@ -802,68 +808,119 @@ def get_model_endpoint(kg_id: str, model_id: str):
 # ---------------------------------------------------------------------
 @router.get("/entity/{name}")
 def get_entity_endpoint(name: str):
-    """返回实体属性以及所有 1‑跳直接关系，供前端 `entity.html` 使用。
-    
-    首先在 Neo4j（fallback）中尝试查询实体节点；若图中没有对应节点，则返回 404。
-    然后从当前 KG 的 **最新模型**（草稿或正式）读取 schema 中的 `relations`/`relationships`
-    计算与该实体直接关联的关系并返回与前端期望的结构相同。"""
-    client = Neo4jClient()
+  """返回实体属性以及所有 1‑跳直接关系，供前端 `entity.html` 使用。
+  
+  首先在 Neo4j（fallback）中尝试查询实体节点；若图中没有对应节点，则返回 404。
+  然后从当前 KG 的 **最新模型**（草稿或正式）读取 schema 中的 `relations`/`relationships`
+  计算与该实体直接关联的关系并返回与前端期望的结构相同。"""
+  client = Neo4jClient()
 
-    # 1️⃣ 查询实体节点（fallback 情况下返回 dict，真实情况返回 {'n': ...}）
-    node_res = client.run(
-        "MATCH (n:Entity {name: $name}) RETURN n",
-        {"name": name},
-    )
-    if not node_res:
-        raise HTTPException(status_code=404, detail="Entity not found")
-    node = node_res[0]["n"] if isinstance(node_res[0], dict) else node_res[0]
+  # 1️⃣ 查询实体节点（fallback 情况下返回 dict，真实情况返回 {'n': ...}）
+  node_res = client.run(
+      "MATCH (n:Entity {name: $name}) RETURN n",
+      {"name": name},
+  )
+  if not node_res:
+      raise HTTPException(status_code=404, detail="Entity not found")
+  node = node_res[0]["n"] if isinstance(node_res[0], dict) else node_res[0]
 
-    # 2️⃣ 从模型 schema 中提取关联关系（不依赖图数据）
+  # 2️⃣ 从模型 schema 中提取关联关系（不依赖图数据）
+  from ..core.models_store import list_all_models
+  # No KG ID supplied; retrieve any available model (fallback to first)
+  models = list_all_models()
+  target_model = None
+  # 优先使用草稿模型，否则取第一个模型
+  for m in models:
+      if m.get("status") == "草稿":
+          target_model = m
+          break
+  if not target_model and models:
+      target_model = models[0]
+  relations_out = []
+  if target_model:
+      schema = target_model.get("schema", {})
+      rels = schema.get("relations") or schema.get("relationships") or []
+      for rel in rels:
+          from_ent = rel.get("from", "").split(".")[0]
+          to_ent = rel.get("to", "").split(".")[0]
+          if from_ent == name or to_ent == name:
+              relations_out.append({
+                  "path": [from_ent, to_ent],
+                  "relations": [rel.get("type", "")],
+              })
+  # 3️⃣ 兼容旧的 1‑跳图查询（保留，以防图中有额外关系）
+  path_res = client.variable_path_query(
+      start_name=name,
+      min_hops=1,
+      max_hops=1,
+  )
+  for rec in path_res:
+      path_names = []
+      for p in rec.get("path", []):
+          if isinstance(p, dict):
+              path_names.append(p.get("name"))
+          else:
+              try:
+                  path_names.append(p["name"])  # type: ignore[index]
+              except Exception:
+                  path_names.append(str(p))
+      relations_out.append({
+          "path": path_names,
+          "relations": rec.get("relations", []),
+      })
+
+  return {"node": node, "relations": relations_out}
+
+# ---------------------------------------------------------------
+# 实体语义名称（semantic name）端点
+# ---------------------------------------------------------------
+
+@router.get("/entity/{name}/semantic")
+def get_entity_semantic(name: str):
+    """获取实体的语义名称（如果模型中有 metadata.semanticName）
+    若未定义则返回实体本身的名称（即表名）。"""
     from ..core.models_store import list_all_models
-    # No KG ID supplied; retrieve any available model (fallback to first)
     models = list_all_models()
-    target_model = None
-    # 优先使用草稿模型，否则取第一个模型
-    for m in models:
-        if m.get("status") == "草稿":
-            target_model = m
-            break
-    if not target_model and models:
-        target_model = models[0]
-    relations_out = []
-    if target_model:
-        schema = target_model.get("schema", {})
-        rels = schema.get("relations") or schema.get("relationships") or []
-        for rel in rels:
-            from_ent = rel.get("from", "").split(".")[0]
-            to_ent = rel.get("to", "").split(".")[0]
-            if from_ent == name or to_ent == name:
-                relations_out.append({
-                    "path": [from_ent, to_ent],
-                    "relations": [rel.get("type", "")],
-                })
-    # 3️⃣ 兼容旧的 1‑跳图查询（保留，以防图中有额外关系）
-    path_res = client.variable_path_query(
-        start_name=name,
-        min_hops=1,
-        max_hops=1,
-    )
-    for rec in path_res:
-        path_names = []
-        for p in rec.get("path", []):
-            if isinstance(p, dict):
-                path_names.append(p.get("name"))
-            else:
-                try:
-                    path_names.append(p["name"])  # type: ignore[index]
-                except Exception:
-                    path_names.append(str(p))
-        relations_out.append({
-            "path": path_names,
-            "relations": rec.get("relations", []),
-        })
+    # 优先使用草稿模型
+    target_model = next((m for m in models if m.get("status") == "草稿"), models[0] if models else None)
+    if not target_model:
+        raise HTTPException(status_code=404, detail="No model found")
+    # 在模型 schema 中查找对应实体
+    schema = target_model.get("schema", {})
+    entity = next((e for e in schema.get("entities", []) if e.get("name") == name), None)
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found in model")
+    semantic = entity.get("metadata", {}).get("semanticName") or name
+    return {"semanticName": semantic}
 
-    return {"node": node, "relations": relations_out}
+@router.put("/entity/{name}/semantic")
+def update_entity_semantic(name: str, payload: dict):
+    """更新实体的语义名称。
+    payload 示例: {"semanticName": "班级"}
+    """
+    new_semantic = payload.get("semanticName")
+    if not new_semantic:
+        raise HTTPException(status_code=400, detail="semanticName is required")
+    from ..core.models_store import list_all_models, edit_model
+    models = list_all_models()
+    # 取当前草稿模型
+    target_model = next((m for m in models if m.get("status") == "草稿"), None)
+    if not target_model:
+        raise HTTPException(status_code=404, detail="Draft model not found")
+    schema = target_model.get("schema", {})
+    entity = next((e for e in schema.get("entities", []) if e.get("name") == name), None)
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found in model")
+    # 更新 metadata
+    if not isinstance(entity.get("metadata"), dict):
+        entity["metadata"] = {}
+    entity["metadata"]["semanticName"] = new_semantic
+    # 保存模型（重新编辑）
+    updated = edit_model(target_model.get("id"), schema)
+    if not updated:
+        raise HTTPException(status_code=500, detail="Failed to update model")
+    return {"name": name, "semanticName": new_semantic}
+
 
 
 @router.delete("/kg/{kg_id}/models/{model_id}")

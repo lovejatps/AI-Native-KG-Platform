@@ -10,34 +10,84 @@
 </head>
 <body>
     <a href="/kg" style="position:absolute;top:1rem;right:1rem;background:#f2f2f2;padding:0.4rem 0.8rem;border-radius:4px;text-decoration:none;color:#333;font-weight:bold;">← 返回列表</a>
-    <h1 id="title">实体详情</h1>
-    <div class="section" id="attributes"></div>
-    <div class="section" id="relations"></div>
-    <script>
-        // 从 URL 参数获取实体名称
-        const params = new URLSearchParams(window.location.search);
-        const name = params.get('name');
-        if (!name) { document.getElementById('title').textContent = '缺少实体名称'; }
-        else {
-            document.getElementById('title').textContent = `实体: ${name}`;
-            fetch(`/entity/${encodeURIComponent(name)}`)
-                .then(r => r.json())
-                .then(data => {
-                    const attrDiv = document.getElementById('attributes');
-                    const relDiv = document.getElementById('relations');
-                    if (data.node) {
-                        attrDiv.innerHTML = `<h2>属性</h2><pre>${JSON.stringify(data.node, null, 2)}</pre>`;
-                    } else { attrDiv.innerHTML = '<p>未找到实体</p>'; }
-                    if (data.relations && data.relations.length) {
-                        let html = '<h2>直接关系 (1跳)</h2><ul>';
-                        data.relations.forEach(r => {
-                            html += `<li>路径: ${r.path.join(' → ')} , 关系: ${r.relations.join(', ')}</li>`;
-                        });
-                        html += '</ul>';
-                        relDiv.innerHTML = html;
-                    } else { relDiv.innerHTML = '<p>无直接关系</p>'; }
-                });
-        }
-    </script>
+<h1 id="title">实体详情</h1>
+      <!-- 实体语义名称行内编辑 -->
+      <div id="semanticContainer" style="margin:8px 0;">
+          实体语义名称：
+          <span id="semanticDisplay"></span>
+          <button id="editSemanticBtn" onclick="startEditSemantic()">编辑</button>
+          <input type="text" id="semanticInput" style="width:200px;display:none;" />
+          <button id="saveSemanticBtn" onclick="saveSemanticName()" style="display:none;">保存</button>
+      </div>
+      <div class="section" id="attributes"></div>
+      <div class="section" id="relations"></div>
+      <script>
+          // 从 URL 参数获取实体名称
+          const params = new URLSearchParams(window.location.search);
+          const name = params.get('name');
+          if (!name) { document.getElementById('title').textContent = '缺少实体名称'; }
+          else {
+              document.getElementById('title').textContent = `实体: ${name}`;
+              // 加载语义名称（如果后端有返回）
+              fetch(`/entity/${encodeURIComponent(name)}/semantic`)
+                  .then(r => r.json())
+                  .then(data => {
+                      const semantic = data.semanticName || name;
+                      document.getElementById('semanticDisplay').textContent = semantic;
+                      document.getElementById('semanticInput').value = semantic;
+                  }).catch(() => {
+                      document.getElementById('semanticDisplay').textContent = name;
+                      document.getElementById('semanticInput').value = name;
+                  });
+
+              fetch(`/entity/${encodeURIComponent(name)}`)
+                  .then(r => r.json())
+                  .then(data => {
+                      const attrDiv = document.getElementById('attributes');
+                      const relDiv = document.getElementById('relations');
+                      if (data.node) {
+                          attrDiv.innerHTML = `<h2>属性</h2><pre>${JSON.stringify(data.node, null, 2)}</pre>`;
+                      } else { attrDiv.innerHTML = '<p>未找到实体</p>'; }
+                      if (data.relations && data.relations.length) {
+                          let html = '<h2>直接关系 (1跳)</h2><ul>';
+                          data.relations.forEach(r => {
+                              html += `<li>路径: ${r.path.join(' → ')} , 关系: ${r.relations.join(', ')}</li>`;
+                          });
+                          html += '</ul>';
+                          relDiv.innerHTML = html;
+                      } else { relDiv.innerHTML = '<p>无直接关系</p>'; }
+                  });
+          }
+
+          function startEditSemantic() {
+              document.getElementById('semanticDisplay').style.display = 'none';
+              document.getElementById('editSemanticBtn').style.display = 'none';
+              document.getElementById('semanticInput').style.display = '';
+              document.getElementById('saveSemanticBtn').style.display = '';
+              document.getElementById('semanticInput').focus();
+          }
+
+          function saveSemanticName() {
+              const semantic = document.getElementById('semanticInput').value.trim();
+              if (!semantic) { alert('语义名称不能为空'); return; }
+              fetch(`/entity/${encodeURIComponent(name)}/semantic`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ semanticName: semantic })
+              }).then(r => {
+                  if (r.ok) {
+                      alert('语义名称已保存');
+                      document.getElementById('semanticDisplay').textContent = semantic;
+                      // 切回展示模式
+                      document.getElementById('semanticDisplay').style.display = '';
+                      document.getElementById('editSemanticBtn').style.display = '';
+                      document.getElementById('semanticInput').style.display = 'none';
+                      document.getElementById('saveSemanticBtn').style.display = 'none';
+                  } else {
+                      alert('保存失败');
+                  }
+              }).catch(() => alert('网络错误，保存失败'));
+          }
+      </script>
 </body>
 </html>

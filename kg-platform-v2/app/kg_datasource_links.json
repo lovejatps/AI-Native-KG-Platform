@@ -344,5 +344,15 @@
       "class",
       "grade"
     ]
+  },
+  {
+    "id": "cfc4c26cf68841d1a24756d3fdb3c344",
+    "kg_id": "f8fbc2a3-e7c0-4a61-9f29-97b003ee8c80",
+    "ds_id": "fa14bae160f04cd9b25bece0e9b2275e",
+    "tables": [
+      "class",
+      "grade",
+      "student"
+    ]
   }
 ]
