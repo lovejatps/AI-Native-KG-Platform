@@ -159,37 +159,63 @@ def get_model(model_id: str) -> Optional[Dict[str, Any]]:
     return out
 
 def edit_model(model_id: str, new_schema: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    # Validate schema basics
-    if not isinstance(new_schema, dict) or "entities" not in new_schema:
-        raise ValueError("Missing required key: 'entities'")
-    # Fetch existing model
-    existing = get_model(model_id)
-    if not existing:
-        return None
-    # Preserve relations if not supplied
-    old_schema = existing.get("schema", {})
-    if "relations" not in new_schema:
-        new_schema["relations"] = old_schema.get("relations", [])
+  # Validate schema basics
+  if not isinstance(new_schema, dict) or "entities" not in new_schema:
+      raise ValueError("Missing required key: 'entities'")
+  # Fetch existing model
+  existing = get_model(model_id)
+  if not existing:
+      return None
+  # Preserve relations if not supplied
+  old_schema = existing.get("schema", {})
+  if "relations" not in new_schema:
+      new_schema["relations"] = old_schema.get("relations", [])
 
-    # Update node
-    _run(
-        "MATCH (m:Model {id: $id}) SET m.schema = $schema, m.status = '草稿', m.updated_at = $now",
-        {
-            "id": model_id,
-            "schema": _serialize_schema(new_schema),
-            "now": datetime.datetime.utcnow().isoformat(),
-        },
-    )
-    # Ensure fallback store reflects changes (in case of in‑memory mode)
-    if model_id in _neo._store:
-        node = _neo._store[model_id]
-        node["schema"] = _serialize_schema(new_schema)
-        node["status"] = "草稿"
-        node["updated_at"] = datetime.datetime.utcnow().isoformat()
-        _neo._store[model_id] = node
-    # Return updated representation
-    updated = get_model(model_id)
-    return updated
+  # Update node
+  _run(
+      "MATCH (m:Model {id: $id}) SET m.schema = $schema, m.status = '草稿', m.updated_at = $now",
+      {
+          "id": model_id,
+          "schema": _serialize_schema(new_schema),
+          "now": datetime.datetime.utcnow().isoformat(),
+      },
+  )
+  # Ensure fallback store reflects changes (in case of in‑memory mode)
+  if model_id in _neo._store:
+      node = _neo._store[model_id]
+      node["schema"] = _serialize_schema(new_schema)
+      node["status"] = "草稿"
+      node["updated_at"] = datetime.datetime.utcnow().isoformat()
+      _neo._store[model_id] = node
+  # Return updated representation
+  updated = get_model(model_id)
+  return updated
+
+def publish_model(kg_id: str, model_id: str) -> Optional[Dict[str, Any]]:
+  """将指定模型设为正式（status='正式')，并将同 KG 其它正式模型降为草稿。"""
+  # Ensure model exists and belongs to KG
+  model = get_model(model_id)
+  if not model or model.get("kg_id") != kg_id:
+      return None
+  # 如果已经是正式，不做改变
+  if model.get("status") == "正式":
+      return model
+  # 将所有同 KG 的正式模型改为草稿
+  records = _run("MATCH (m:Model {kg_id: $kg_id, status: '正式'}) RETURN m.id AS id", {"kg_id": kg_id})
+  for rec in records:
+      other_id = rec.get("id")
+      if other_id and other_id != model_id:
+          _run("MATCH (m:Model {id: $id}) SET m.status = '草稿'", {"id": other_id})
+          # fallback store update
+          if other_id in _neo._store:
+              _neo._store[other_id]["status"] = "草稿"
+  # 更新当前模型为正式
+  _run("MATCH (m:Model {id: $id}) SET m.status = '正式'", {"id": model_id})
+  if model_id in _neo._store:
+      _neo._store[model_id]["status"] = "正式"
+  # Return updated model
+  return get_model(model_id)
+
 
 def delete_model(model_id: str) -> bool:
     _run("MATCH (m:Model {id: $id}) DETACH DELETE m", {"id": model_id})

@@ -431,17 +431,18 @@ function initFromSchema(schema) {
      }
 
     // 渲染左侧实体列表
-    function renderEntityList() {
+function renderEntityList() {
       const ul = document.getElementById('entityList');
       ul.innerHTML = '';
       Object.keys(entityProps).forEach(name => {
-const li = document.createElement('li');
-          li.style.cursor = 'pointer';
-          li.style.padding = '4px 0';
-          li.textContent = name;
-          li.draggable = false; // Prevent default drag behavior
-          li.onclick = () => selectEntityFromList(name);
-          ul.appendChild(li);
+        const li = document.createElement('li');
+        li.style.cursor = 'pointer';
+        li.style.padding = '4px 0';
+        const displayName = entitySemanticNames[name] || name;
+        li.textContent = displayName;
+        li.draggable = false; // Prevent default drag behavior
+        li.onclick = () => selectEntityFromList(name);
+        ul.appendChild(li);
       });
     }
 
@@ -474,12 +475,14 @@ const li = document.createElement('li');
         const semantic = semanticInput || name; // 语义名称若未填写则使用生成的名称
         // 创建节点
         const cnt = graph.getNodes().length;
-        const node = graph.addNode({
+        const displayLabel = semantic; // show semantic name on canvas
+            const node = graph.addNode({
+            id: name,
             x: 50 + (cnt % 4) * 200,
             y: 50 + Math.floor(cnt / 4) * 150,
             width: 150,
             height: 80,
-            label: name,
+            label: displayLabel,
             attrs: { body: { stroke: '#5F95FF', fill: '#EFF4FF' } },
         });
         // 初始化空属性列表
@@ -491,7 +494,7 @@ const li = document.createElement('li');
     }
     // 通过左侧列表点击选中实体并在画布上高亮
     function selectEntityFromList(name) {
-      const node = graph.getNodes().find(n => n.getLabel() === name);
+      const node = graph.getNodes().find(n => n.id === name);
       if (node) {
         graph.centerContent();
         graph.select(node);
@@ -501,7 +504,7 @@ const li = document.createElement('li');
 
     // 节点点击事件 - 打开属性面板
     graph.on('node:click', ({ node }) => {
-      const name = node.getLabel();
+      const name = node.id; // use internal identifier
       showPropertyPanel(name);
     });
     // Prevent default drag-and-drop creation on graph container
@@ -552,10 +555,22 @@ const li = document.createElement('li');
     }
 
     // 更新实体语义名称（全局映射）
-    function updateEntitySemantic(entity, newSemantic) {
-      if (!entity) return;
-      entitySemanticNames[entity] = newSemantic;
-    }
+function updateEntitySemantic(entity, newSemantic) {
+       if (!entity) return;
+       entitySemanticNames[entity] = newSemantic;
+       // Refresh left‑side entity list to show new semantic name
+       renderEntityList();
+       // Update graph node label (if node exists)
+       const node = graph.getNodes().find(n => n.id === entity);
+       if (node) {
+         // X6 node label can be updated via setLabel if available, otherwise setAttrs
+         if (typeof node.setLabel === 'function') {
+           node.setLabel(newSemantic);
+         } else {
+           node.setAttrs({ label: newSemantic });
+         }
+       }
+     }
 
     // 删除属性行
     function removeProperty(entity, idx) {
@@ -606,23 +621,24 @@ const li = document.createElement('li');
       const edges = graph.getEdges();
       // 组装 entities
 const entities = nodes.map(node => {
-      const props = entityProps[node.getLabel()] || [];
-      // Convert internal property representation to backend schema format
-      const schemaProps = props.map(p => ({
-        // Use semantic name if provided; otherwise fall back to original field.
-        name: p.semantic || p.origField,
-        type: p.type || 'string',
-        source_column: p.origField,
-      }));
-return {
-                     name: node.getLabel(),
-                     properties: schemaProps,
-// Preserve semantic name (metadata.semanticName) for entity UI
-                    metadata: {
-                       semanticName: entitySemanticNames[node.getLabel()] || node.getLabel()
-                     },
-                   };
-    });
+       const internalName = node.id || node.getLabel(); // fallback if id missing
+       const props = entityProps[internalName] || [];
+       // Convert internal property representation to backend schema format
+       const schemaProps = props.map(p => ({
+         // Use semantic name if provided; otherwise fall back to original field.
+         name: p.semantic || p.origField,
+         type: p.type || 'string',
+         source_column: p.origField,
+       }));
+ return {
+                      name: internalName,
+                      properties: schemaProps,
+ // Preserve semantic name (metadata.semanticName) for entity UI
+                     metadata: {
+                        semanticName: entitySemanticNames[internalName] || node.getLabel()
+                      },
+                    };
+     });
 // DEBUG: log edges before extracting relations
           console.log('Saving: edges from graph', edges);
           const relations = edges.map(edge => {
@@ -633,22 +649,20 @@ return {
               // 1. New X6 API
               const srcCell = edge.getSourceCell?.();
               const tgtCell = edge.getTargetCell?.();
-              if (srcCell && typeof srcCell.getLabel === 'function') {
-                srcLabel = srcCell.getLabel();
-              } else if (edge.source && typeof edge.source.getLabel === 'function') {
-                srcLabel = edge.source.getLabel();
+              if (srcCell && srcCell.id) {
+                srcLabel = srcCell.id;
+              } else if (edge.source && edge.source.id) {
+                srcLabel = edge.source.id;
               } else if (edge.source && typeof edge.source === 'string') {
-                const node = graph.getCell(edge.source);
-                if (node && typeof node.getLabel === 'function') srcLabel = node.getLabel();
+                srcLabel = edge.source;
               }
 
-              if (tgtCell && typeof tgtCell.getLabel === 'function') {
-                tgtLabel = tgtCell.getLabel();
-              } else if (edge.target && typeof edge.target.getLabel === 'function') {
-                tgtLabel = edge.target.getLabel();
+              if (tgtCell && tgtCell.id) {
+                tgtLabel = tgtCell.id;
+              } else if (edge.target && edge.target.id) {
+                tgtLabel = edge.target.id;
               } else if (edge.target && typeof edge.target === 'string') {
-                const node = graph.getCell(edge.target);
-                if (node && typeof node.getLabel === 'function') tgtLabel = node.getLabel();
+                tgtLabel = edge.target;
               }
             } catch (e) {
               // ignore
@@ -707,7 +721,25 @@ modalDiv.innerHTML = `
     document.body.appendChild(modalDiv);
 
     // 发布、回滚占位函数（后端未实现，先提示）
-    function publishModel() { alert('发布功能待实现'); }
+    function publishModel() {
+        // 调用后端发布接口，将模型状态设为正式
+        fetch(`/kg/${kgId}/models/${modelId}/publish`, {method: 'POST'})
+          .then(r => {
+            if (!r.ok) throw new Error('发布失败');
+            return r.json();
+          })
+          .then(updated => {
+            alert('模型已发布为正式版');
+            // 更新版本号显示（如果后端返回 version）
+            const versionSpan = document.getElementById('schemaVersionInfo');
+            if (versionSpan && updated.version) versionSpan.textContent = updated.version;
+            // 重新加载模型以刷新状态/显示（简易实现：刷新页面）
+            location.reload();
+          })
+          .catch(err => {
+            alert(err.message || '发布出错');
+          });
+      }
     function rollbackModel() { alert('回滚功能待实现'); }
 
     // ---------------------------------------------------------------
@@ -715,45 +747,61 @@ modalDiv.innerHTML = `
     // ---------------------------------------------------------------
 if (!window.__graphSchemaLoaded) {
   window.__graphSchemaLoaded = true;
-  fetch(`/kg/${kgId}/models/${modelId}`)
-      .then(r => r.json())
-      .then(data => {
-        const schema = data.schema || {};
-         // 清空画布并初始化属性
-         graph.clearCells();
-         initFromSchema(schema);
-        const entities = schema.entities || [];
-        const relations = schema.relations || [];
-        const nodeMap = {};
-        // 去重实体避免重复渲染
-        const seenEntities = new Set();
-        entities.forEach((e, idx) => {
-          if (seenEntities.has(e.name)) return; // 跳过重复实体
-          seenEntities.add(e.name);
-          const node = graph.addNode({
-            x: 50 + (idx % 4) * 200,
-            y: 50 + Math.floor(idx / 4) * 150,
-            width: 150,
-            height: 80,
-            label: e.name,
-            attrs: { body: { stroke: '#5F95FF', fill: '#EFF4FF' } },
-          });
-          nodeMap[e.name.toLowerCase()] = node;
-        });
-        relations.forEach(rel => {
-          const src = nodeMap[rel.source];
-          const tgt = nodeMap[rel.target];
-          if (src && tgt) {
-            graph.addEdge({
-              source: src,
-              target: tgt,
-              labels: [{ attrs: { label: { text: rel.type } } }],
-            });
-          }
-        });
+fetch(`/kg/${kgId}/models/${modelId}`)
+    .then(r => r.json())
+    .then(data => {
+      const schema = data.schema || {};
+       // 清空画布并初始化属性
+       graph.clearCells();
+       initFromSchema(schema);
+       // 更新顶部显示的 Schema 版本号（使用模型的 version 字段）
+       const versionSpan = document.getElementById('schemaVersionInfo');
+       if (versionSpan) versionSpan.textContent = data.version || 'V1';
+       // 更新数据源信息（取第一个集成的 system_name）
+       fetch(`/kg/${kgId}/integrations`)
+         .then(r => r.json())
+         .then(intData => {
+           const dsInfoSpan = document.getElementById('dataSourceInfo');
+           if (dsInfoSpan && intData.integrations && intData.integrations.length) {
+             dsInfoSpan.textContent = intData.integrations[0].system_name || '未知系统';
+           }
+         })
+         .catch(() => {/* ignore */});
 
-      })
-        .catch(err => alert('加载模型失败: ' + err));
+       const entities = schema.entities || [];
+       const relations = schema.relations || [];
+       const nodeMap = {};
+       // 去重实体避免重复渲染
+       const seenEntities = new Set();
+       entities.forEach((e, idx) => {
+         if (seenEntities.has(e.name)) return; // 跳过重复实体
+         seenEntities.add(e.name);
+         const displayLabel = entitySemanticNames[e.name] || e.name;
+           const node = graph.addNode({
+           id: e.name, // internal identifier
+           x: 50 + (idx % 4) * 200,
+           y: 50 + Math.floor(idx / 4) * 150,
+           width: 150,
+           height: 80,
+           label: displayLabel,
+           attrs: { body: { stroke: '#5F95FF', fill: '#EFF4FF' } },
+         });
+         nodeMap[e.name.toLowerCase()] = node;
+       });
+       relations.forEach(rel => {
+         const src = nodeMap[rel.source];
+         const tgt = nodeMap[rel.target];
+         if (src && tgt) {
+           graph.addEdge({
+             source: src,
+             target: tgt,
+             labels: [{ attrs: { label: { text: rel.type } } }],
+           });
+         }
+       });
+
+    })
+      .catch(err => alert('加载模型失败: ' + err));
     }
 
   </script>
