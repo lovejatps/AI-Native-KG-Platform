@@ -1,0 +1,181 @@
+{
+  "id": "f7c679a7-5188-4f7f-b2bf-a734b8eb0d02",
+  "timestamp": "2026-04-23T10:39:07.889887Z",
+  "filename": "qz_test.md",
+  "graph": {
+    "nodes": [
+      {
+        "id": "A",
+        "properties": {
+          "name": "A"
+        }
+      },
+      {
+        "id": "B",
+        "properties": {
+          "name": "B"
+        }
+      },
+      {
+        "id": "C",
+        "properties": {
+          "name": "C"
+        }
+      },
+      {
+        "id": "阿禾",
+        "properties": {
+          "occupation": "弟子",
+          "color": "黄色, 青色",
+          "gender": "男",
+          "origin": "extraction",
+          "name": "阿禾",
+          "clothing": "麻布上衣（黄色），青色布料九分裤",
+          "type": "人物",
+          "age": 8
+        }
+      },
+      {
+        "id": "师父",
+        "properties": {
+          "occupation": "师父",
+          "origin": "extraction",
+          "name": "师父",
+          "type": "人物"
+        }
+      },
+      {
+        "id": "嫩竹",
+        "properties": {
+          "origin": "extraction",
+          "name": "嫩竹",
+          "type": "植物"
+        }
+      },
+      {
+        "id": "青竹峰",
+        "properties": {
+          "origin": "extraction",
+          "name": "青竹峰",
+          "type": "地点"
+        }
+      },
+      {
+        "id": "石坛",
+        "properties": {
+          "origin": "extraction",
+          "name": "石坛",
+          "type": "地点"
+        }
+      },
+      {
+        "id": "后山",
+        "properties": {
+          "origin": "extraction",
+          "name": "后山",
+          "type": "地点"
+        }
+      },
+      {
+        "id": "竹片",
+        "properties": {
+          "origin": "extraction",
+          "name": "竹片",
+          "type": "物品"
+        }
+      }
+    ],
+    "relationships": [
+      {
+        "source": "A",
+        "target": "B",
+        "type": "REL",
+        "origin": null
+      },
+      {
+        "source": "B",
+        "target": "C",
+        "type": "REL",
+        "origin": null
+      },
+      {
+        "source": "阿禾",
+        "target": "竹片",
+        "type": "使用",
+        "origin": "extraction"
+      },
+      {
+        "source": "阿禾",
+        "target": "师父",
+        "type": "行礼",
+        "origin": "extraction"
+      },
+      {
+        "source": "阿禾",
+        "target": "石坛",
+        "type": "所在地点",
+        "origin": "extraction"
+      },
+      {
+        "source": "阿禾",
+        "target": "青竹峰",
+        "type": "所在地点",
+        "origin": "extraction"
+      },
+      {
+        "source": "阿禾",
+        "target": "嫩竹",
+        "type": "照料",
+        "origin": "extraction"
+      },
+      {
+        "source": "阿禾",
+        "target": "嫩竹",
+        "type": "支撑",
+        "origin": "extraction"
+      },
+      {
+        "source": "阿禾",
+        "target": "后山",
+        "type": "前往",
+        "origin": "extraction"
+      },
+      {
+        "source": "阿禾",
+        "target": "师父",
+        "type": "师徒关系",
+        "origin": "extraction"
+      },
+      {
+        "source": "师父",
+        "target": "阿禾",
+        "type": "认可",
+        "origin": "extraction"
+      },
+      {
+        "source": "师父",
+        "target": "阿禾",
+        "type": "注视",
+        "origin": "extraction"
+      },
+      {
+        "source": "师父",
+        "target": "石坛",
+        "type": "所在地点",
+        "origin": "extraction"
+      },
+      {
+        "source": "师父",
+        "target": "阿禾",
+        "type": "命令前往后山守竹",
+        "origin": "extraction"
+      },
+      {
+        "source": "师父",
+        "target": "阿禾",
+        "type": "处罚",
+        "origin": "extraction"
+      }
+    ]
+  }
+}

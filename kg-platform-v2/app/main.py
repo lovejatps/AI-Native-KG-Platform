@@ -8,6 +8,10 @@ import os
 
 app = FastAPI(title="KG Platform V2")
 
+# Initialise the placeholder business DB when the app starts (idempotent)
+from app.core.init_business_db import init_business_db
+
+
 # Import logger and middleware before usage
 from app.core.logger import get_logger
 from app.auth.middleware import JWTAuthMiddleware
@@ -35,6 +39,12 @@ app.add_middleware(JWTAuthMiddleware)
 from app.core.config import get_settings
 
 _logger.info(f"LLM_MAX_OUTPUT_TOKENS set to {get_settings().LLM_MAX_OUTPUT_TOKENS}")
+
+# Initialise business DB on FastAPI startup – idempotent
+@app.on_event("startup")
+def _startup_init_db():
+    init_business_db()
+    _logger.info("Business SQLite DB initialised (or already present)")
 
 # Mount static frontend files
 

@@ -4,11 +4,13 @@ from app.core.llm import LLM
 from . import schema_cache
 from ..core.redis_client import RedisCache
 from ..core.logger import get_logger
+from typing import Dict, Any
 
 _logger = get_logger(__name__)
 
 
 def build_schema(text: str):
+    # existing function unchanged (kept for external use)
     """Generate or retrieve a cached schema for *text*.
 
     1. Compute a SHA‑256 hash of the input text – this serves as a deterministic
@@ -47,6 +49,17 @@ def build_schema(text: str):
     """
     res = llm.chat(prompt)
     schema = llm._parse_response(res)
+    # Ensure each entity's properties have `metadata.semanticName` (default to the property name)
+    for ent in schema.get('entities', []):
+        for prop in ent.get('properties', []):
+            # Ensure source_column exists; if missing, fall back to the property name
+            if not prop.get('source_column'):
+                prop['source_column'] = prop.get('name')
+            # Add metadata if absent
+            meta = prop.get('metadata') or {}
+            if 'semanticName' not in meta:
+                meta['semanticName'] = prop.get('name')
+            prop['metadata'] = meta
     if not schema:
         schema = {"entities": ["Unknown"], "relations": [], "properties": {}}
 
@@ -64,3 +77,23 @@ def build_schema(text: str):
         _logger.warning(f"Unable to store schema in Redis: {e}")
 
     return schema
+
+def generate_schema_for_kg(kg_id: str) -> Dict[str, Any]:
+    """Fallback schema generator for a KG.
+    If there is a published model for the KG, return its schema.
+    Otherwise return an empty placeholder schema.
+    """
+    from ..core.models_store import list_models
+    # Try to get a published schema (status "正式") similar to get_published_schema
+    models = list_models(kg_id)
+    published = [m for m in models if m.get('status') == '正式']
+    if published:
+        # choose highest version
+        def version_key(m):
+            v = m.get('version', 'V0')
+            return int(''.join(ch for ch in v if ch.isdigit()) or 0)
+        latest = max(published, key=version_key)
+        return latest.get('schema', {'entities': [], 'relations': []})
+    # No published model – return empty schema placeholder
+    return {'entities': [], 'relations': []}
+

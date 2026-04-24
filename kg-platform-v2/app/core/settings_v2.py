@@ -39,9 +39,8 @@ class SettingsV2(BaseSettings):
 
     # New fields for Phase‑2
     ENV: str = Field(default="development", description="Current environment")
-    LOG_LEVEL: str = Field(
-        default_factory=lambda: os.getenv("LOG_LEVEL", "TRACE").upper()
-    )
+    LOG_LEVEL: str = Field(default_factory=lambda: os.getenv("LOG_LEVEL", "TRACE").upper())
+    BUSINESS_DB_PATH: str = Field(default="business.db", description="Path to the business SQLite DB file used by NL2SQL")
     LLM_MAX_OUTPUT_TOKENS: int = 4000
 
     # Feature flags – can be overridden via environment variable JSON string

@@ -26,13 +26,44 @@
                 );
                 localStorage.setItem('chatSessionId', sessionId);
             }
-            const resp = await fetch('/chat', {
+            // Determine endpoint based on NL2SQL mode
+            const nl2sqlMode = document.getElementById('nl2sqlMode').checked;
+            let endpoint = '/chat';
+            const payload = {session_id: sessionId, message: text};
+            if (nl2sqlMode) {
+                // Show KG ID input if hidden
+                document.getElementById('kgIdInput').style.display = 'inline-block';
+                const kgId = document.getElementById('kgIdInput').value.trim();
+                if (!kgId) {
+                    alert('请填写 KG ID 以使用 NL2SQL 模式');
+                    return;
+                }
+                endpoint = '/nl2sql/chat';
+                payload.kg_id = kgId;
+            } else {
+                // Hide KG ID field when not in NL2SQL mode
+                document.getElementById('kgIdInput').style.display = 'none';
+            }
+            const resp = await fetch(endpoint, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({session_id: sessionId, message: text})
+                body: JSON.stringify(payload)
             });
             const data = await resp.json();
-            appendMessage('bot', data.response);
+            if (nl2sqlMode && data.response) {
+                const respObj = data.response;
+                const sql = respObj.sql || '';
+                const result = respObj.result || '';
+                const error = respObj.error || '';
+                if (error) {
+                    appendMessage('bot', `❌ 错误: ${error}`);
+                } else {
+                    appendMessage('bot', `🧩 生成的 SQL:\n${sql}`);
+                    appendMessage('bot', `🔍 查询结果: ${JSON.stringify(result)}`);
+                }
+            } else {
+                appendMessage('bot', data.response);
+            }
         }
         function appendMessage(cls, text) {
             const chat = document.getElementById('chat');
@@ -46,6 +77,15 @@
         document.addEventListener('DOMContentLoaded', () => {
             const input = document.getElementById('msgInput');
             input.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
+            // Toggle KG ID input visibility when NL2SQL mode is (un)checked
+            const nl2sqlCheckbox = document.getElementById('nl2sqlMode');
+            const kgInput = document.getElementById('kgIdInput');
+            const toggleKgInput = () => {
+                kgInput.style.display = nl2sqlCheckbox.checked ? 'inline-block' : 'none';
+            };
+            nl2sqlCheckbox.addEventListener('change', toggleKgInput);
+            // Ensure correct initial state on page load
+            toggleKgInput();
         });
     </script>
 </head>
@@ -53,11 +93,13 @@
     <nav style="margin-bottom:1rem;">
         <a href="/kg_page">知识图谱列表</a> |
         <a href="/chat">Chat</a> |
-        <a href="/datasources_page">数据源管理</a>
+        <a href="/datasources_page">数据源管理</a> |
+        <label><input type="checkbox" id="nl2sqlMode"/> NL2SQL 模式</label>
     </nav>
     <h1>KG Chat Interface</h1>
     <div id="chat"></div>
     <input type="text" id="msgInput" placeholder="输入消息并回车发送" style="width:80%" />
+    <input type="text" id="kgIdInput" placeholder="KG ID（NL2SQL 模式）" style="width:30%;display:none;margin-left:5px;" />
     <button onclick="sendMessage()">发送</button>
 </body>
 </html>

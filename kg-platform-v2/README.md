@@ -1,89 +1,33 @@
-# AI Native KG Platform
 
-## 项目概述
-本仓库实现 **AI‑Native 知识图谱平台（V2）**，核心功能包括：
-- **文档处理**：从 PDF、TXT 等文件抽取原始文本。
-- **LLM 抽取**：利用 LLM 自动识别实体、属性与关系，生成结构化的 KG 数据。
-- **图谱存储**：实体与关系写入 Neo4j（结构化）与 Milvus（向量化）实现 GraphRAG 混合检索。
-- **前端交互**：提供搜索、上传、实体详情、图谱可视化（Cytoscape.js）等 UI。
-- **可扩展**：采用 FastAPI、LangChain/LlamaIndex、OpenAI/VLLM、Anthropic 等，可灵活替换底层模型与向量库。
+## NL2SQL 使用指南
 
-> 项目仍处于 **绿色设计阶段**，大多数实现已完成，正在持续完善测试、文档与 UI 细节。
+### 初始化业务数据库
+- 业务数据库的 SQLite 表（`grade`, `class`, `student`）已在 `app/core/init_business_db.py` 中定义。
+- `app/main.py` 在 FastAPI **startup** 事件里会自动调用 `init_business_db()`，确保在服务启动时表已创建并填充示例数据。
 
-## 项目结构
-```
-kg-platform-v2/
-├─ app/               # FastAPI 应用代码
-│  ├─ api/           # 路由 & 端点实现
-│  ├─ core/          # 配置、LLM 抽象、日志、存储等通用模块
-│  ├─ graph/         # Neo4j 客户端、图构建、查询工具
-│  ├─ ingestion/     # 文档加载、分块、抽取管线
-│  ├─ rag/           # VectorStore (Milvus) & GraphRAG 融合检索
-│  └─ schema/        # 自动 schema 生成与缓存
-├─ docs/              # 设计文档、Neo4j / Milvus 使用指南
-├─ docker-compose.yml # 启动 Neo4j、Milvus、Redis 等依赖
-├─ requirements.txt   # Python 依赖
-└─ tests/             # 单元与集成测试
+### 创建 KG 与模型
+1. 使用 API（或直接在代码中）调用 `create_kg` 创建知识图谱。  
+2. 为该 KG 创建模型，提供与业务表对应的 **schema**（实体 `grade`、`class`、`student`，以及 `class → grade`、`student → class` 的外键关系），状态设为 **正式**（`status: 正式`）。
+
+### 发起 NL2SQL 查询
+```python
+from app.nl2sql.engine import nl2sql_pipeline
+
+sql_result = nl2sql_pipeline('1-B班有多少学生', kg_id)
+print(sql_result['sql'])      # 查看生成的 SQL
+print(sql_result['result'])   # 查看查询结果
 ```
 
-## 关键技术栈
-- **后端**：FastAPI（Python 3.11）
-- **图数据库**：Neo4j（Bolt 协议）
-- **向量数据库**：Milvus
-- **大模型**：OpenAI / VLLM / Anthropic（统一封装在 `app/core/llm.py`）
-- **文档解析**：`unstructured`、`apache-tika`、`pdfminer.six`
-- **检索框架**：LangChain / LlamaIndex
-- **前端**：Vanilla HTML/JS + **Cytoscape.js**（图谱交互式渲染）
+- 对于简单的 “X班有多少学生” 之类的自然语言，系统会使用启发式解析 `_heuristic_intent`，直接生成正确的 **JOIN** 与 **COUNT**，无需调用 LLM。  
+- 若启发式无法识别，系统会回退到 LLM 解析并继续生成 SQL。
 
-## 快速开始
-### 1️⃣ 启动依赖服务
-```bash
-docker-compose up -d   # 启动 Neo4j、Milvus、Redis
+### 期望输出示例
+```sql
+SELECT COUNT(*) AS student_count 
+FROM student s 
+JOIN class c ON s.class_id = c.id 
+WHERE c.name = '1-B';
 ```
-### 2️⃣ 安装 Python 依赖
-```bash
-pip install -r requirements.txt
-```
-### 3️⃣ 运行 API（开发模式）
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8005 --reload
-```
-### 4️⃣ 访问前端页面
-- 搜索首页: `http://localhost:8005/ui`
-- 上传文档: `http://localhost:8005/upload`
-- 实体详情: `http://localhost:8005/entity_page?name=<实体名>`
-- 图谱查看: `http://localhost:8005/graph_view?eid=<extraction_id>`（使用 Cytoscape.js 渲染）
+返回结果类似 `[{ "student_count": 2 }]`。
 
-## 测试套件
-
-### API 文档新增章节
-
-**PUT `/kg/{kg_id}/models/{model_id}`** – 编辑模型的 Schema（仅限草稿状态）。
-- **请求体**: `{\"schema\": <JSON object>}` 必须包含 `entities` 列表，且每个实体需包含 `name` 与 `properties`。
-- **响应**: 返回更新后的模型对象（包括 `id`, `kg_id`, `version`, `status`, `schema` 等字段）。
-- **错误码**:
-  - `400` – 无效的 Schema（缺少 `entities` 或结构错误）或模型不是草稿。
-  - `404` – 指定模型或 KG 未找到。
-  - `500` – 服务器内部错误。
-
-此端点在前端编辑弹窗中被调用，实现了完整的编辑‑保存‑刷新流程。
-```bash
-pytest -q tests/
-```
-新增的测试覆盖：
-- **GET `/entity/{name}` 404**（`tests/test_entity_endpoint.py`）
-- **Neo4j variable_path_query** 多跳查询（`tests/test_neo4j_variable_path.py`）
-- 现有核心功能（schema、向量、图 upsert）保持不变。
-
-## 文档资源
-- **Neo4j**：`docs/neo4j.md` 包含全文索引、可变长度路径的创建与最佳实践。
-- **Milvus**：`docs/milvus.md` 说明集合、向量插入、索引与搜索的完整步骤。
-
-## 进一步阅读 & 贡献指南
-- **Neo4j 官方文档**： https://neo4j.com/docs/cypher-manual/current/
-- **Milvus 官方文档**： https://milvus.io/docs/python-sdk-v2.5.x.md
-- **贡献**：请遵循 PEP8、使用 `black` 格式化代码、提交前确保所有 `pytest` 通过。
-
----
-
-*本 README 将随项目迭代持续更新，如有新功能或架构变更请同步至此文件。*
+> **注意**：`validate_sql` 在缺表情况下会返回原始 SQL，业务 DB 已经在启动时创建，实际执行将返回真实计数。

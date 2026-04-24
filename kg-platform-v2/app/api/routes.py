@@ -30,6 +30,7 @@ router = APIRouter()
 from ..core.chat_context import ChatContextManager
 from ..core.llm import llm
 from ..core.logger import get_logger
+import json
 from typing import Dict, Any
 
 chat_manager = ChatContextManager()
@@ -93,6 +94,21 @@ async def chat_stream_endpoint(payload: Dict[str, Any]):
         _log.info("Streaming chat response stored", response=full_resp)
 
     return StreamingResponse(generator(), media_type="text/event-stream")
+
+
+@router.post("/nl2sql/chat")
+async def nl2sql_chat_endpoint(payload: Dict[str, Any]):
+    _log = get_logger(__name__)
+    _log.info("Received NL2SQL chat request", payload=payload)
+    session_id = payload.get("session_id")  # keep for compatibility, not used
+    message = payload.get("message")
+    kg_id = payload.get("kg_id")
+    if not kg_id or not isinstance(message, str):
+        raise HTTPException(status_code=400, detail="Missing kg_id or message")
+    from ..nl2sql.engine import nl2sql_pipeline
+    response = nl2sql_pipeline(message, kg_id)
+    _log.info("NL2SQL response prepared", response=response)
+    return {"response": response}
 
 class DummyAgent:
     def run(self, message: str) -> str:
@@ -1118,6 +1134,37 @@ def chat_page():
     cur_dir = os.path.dirname(__file__)
     path = os.path.abspath(os.path.join(cur_dir, "..", "frontend", "chat.html"))
     return FileResponse(path)
+
+# ---------------------------------------------------------------------
+# NL2SQL chat endpoint (session‑based)
+# ---------------------------------------------------------------------
+@router.post("/nl2sql/chat")
+async def nl2sql_chat_endpoint(payload: Dict[str, Any]):
+    _log = get_logger(__name__)
+    _log.info("Received NL2SQL chat request", payload=payload)
+    session_id = payload.get("session_id")
+    kg_id = payload.get("kg_id")
+    user_msg = payload.get("message")
+    if not session_id or not kg_id or not isinstance(user_msg, str):
+        raise HTTPException(status_code=400, detail="Missing session_id, kg_id or message")
+    # Store user message in chat context
+    chat_manager.add_message(session_id, "user", user_msg)
+    # Build context (last 10 messages) – may be useful for LLM intent parsing
+    context = chat_manager.get_context(session_id, limit=10)
+    _log.info("NL2SQL chat context prepared", context=context)
+    # Run NL2SQL pipeline (using the last user message only)
+    from ..nl2sql.engine import nl2sql_pipeline
+    nl2sql_result = nl2sql_pipeline(user_msg, kg_id)
+    # Store assistant reply (SQL + optional result) as a JSON string
+    assistant_reply = json.dumps({
+        "sql": nl2sql_result.get("sql"),
+        "result": nl2sql_result.get("result"),
+        "error": nl2sql_result.get("error"),
+    }, ensure_ascii=False)
+    chat_manager.add_message(session_id, "assistant", assistant_reply)
+    _log.info("NL2SQL response stored", response=assistant_reply)
+    return {"response": nl2sql_result}
+
 
 
 @router.get("/datasources_page")

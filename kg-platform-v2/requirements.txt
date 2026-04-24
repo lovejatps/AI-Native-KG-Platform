@@ -7,4 +7,8 @@ pydantic
 pydantic-settings
 unstructured
 requests
+sqlglot
 redis
+pymysql
+SQLAlchemy
+prometheus_client
