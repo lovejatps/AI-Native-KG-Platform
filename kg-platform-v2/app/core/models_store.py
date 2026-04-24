@@ -28,7 +28,7 @@ def sync_schema_to_graph(kg_id: str, schema: Dict[str, Any]) -> None:
     """
     client = Neo4jClient()
     # ---- 1️⃣ 清理旧数据 ----
-    client.run("MATCH (n:Entity) DETACH DELETE n")
+    client.run("MATCH (n:Entity {kg_id: $kg_id}) DETACH DELETE n", {"kg_id": kg_id})
     # fallback store also keeps relationships in a list; clear it explicitly
     if getattr(client, "_fallback", False):
         client._relationships.clear()
@@ -39,6 +39,11 @@ def sync_schema_to_graph(kg_id: str, schema: Dict[str, Any]) -> None:
         client.run(
             "MERGE (e:Entity {name: $name}) SET e.type = $type, e.origin = $origin",
             {"name": ent["name"], "type": ent.get("type", "Table"), "origin": "schema"},
+        )
+        # Ensure each Entity node carries the kg_id for isolation
+        client.run(
+            "MATCH (e:Entity) WHERE NOT EXISTS(e.kg_id) SET e.kg_id = $kg_id",
+            {"kg_id": kg_id},
         )
 
     # ---- 3️⃣ 写入关系 ----

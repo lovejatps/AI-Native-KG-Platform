@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import uuid
 from pathlib import Path
 
 SCHEMA_DIR = Path(__file__).parent / "versions"
@@ -12,12 +13,18 @@ def _schema_path(version: str) -> Path:
 
 
 def save_schema(schema: dict, version: str | None = None) -> str:
+    """Persist a schema JSON with a unique version.
+    If *version* is ``None`` a timestamp + short UUID is generated to guarantee
+    uniqueness even under high concurrency.
+    """
     """Persist a schema JSON.
     If *version* is None, use a timestamp string.
     Returns the version used.
     """
     if version is None:
-        version = time.strftime("%Y%m%d%H%M%S")
+        # timestamp + 6‑char UUID suffix for uniqueness
+        uid = uuid.uuid4().hex[:6]
+        version = f"{time.strftime('%Y%m%d%H%M%S')}_{uid}"
     path = _schema_path(version)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(schema, f, ensure_ascii=False, indent=2)

@@ -12,6 +12,7 @@ from fastapi import (
     BackgroundTasks,
     Response,
 )
+import os
 from fastapi.responses import (
     FileResponse,
     RedirectResponse,
@@ -1215,3 +1216,31 @@ def graph_view_page():
     cur_dir = os.path.dirname(__file__)
     path = os.path.abspath(os.path.join(cur_dir, "..", "frontend", "graph_view.html"))
     return FileResponse(path)
+
+# ----------------------------------------------------------
+# Schema history & KG‑level version APIs
+# ----------------------------------------------------------
+
+from ..core.redis_client import RedisCache
+
+@router.get("/schema/history/{hash_val}")
+def schema_history(hash_val: str):
+    """返回指定 **hash**（不含前缀 `schema:`）的所有 schema 版本列表。
+    示例返回：``{"hash": "<hash>", "versions": ["20241014123045_ab12cd", ...]}``。
+    """
+    rc = RedisCache()
+    # 完整的集合键形如 ``schema:<hash>:versions``
+    key = f"schema:{hash_val}:versions"
+    versions = rc.smembers(key) if rc._available else set()
+    return {"hash": hash_val, "versions": list(versions)}
+
+@router.get("/schema/kg/{kg_id}")
+def schema_by_kg(kg_id: str):
+    """返回指定 KG（``kg_id``）的全部 schema 版本列表。
+    使用 Redis 集合 ``schema_versions:{kg_id}`` 存储。
+    """
+    rc = RedisCache()
+    key = f"schema_versions:{kg_id}"
+    versions = rc.smembers(key) if rc._available else set()
+    return {"kg_id": kg_id, "versions": list(versions)}
+

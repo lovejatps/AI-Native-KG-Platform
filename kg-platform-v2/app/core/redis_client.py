@@ -60,8 +60,8 @@ class RedisCache:
 
     # ---------------------------------------------------------------------
     def set(self, key: str, value: Any, ex: int | None = None) -> bool:
-        """Store *value* (JSON serializable) under *key*.
-        ``ex`` is optional expiry time in seconds.
+        """Store *value* (JSON‑serialisable) under *key*.
+        ``ex`` 为可选的过期时间（秒），若为 ``None`` 则永久保存。
         Returns ``True`` on success.
         """
         if not self._available:
@@ -78,6 +78,30 @@ class RedisCache:
     def delete(self, key: str) -> bool:
         if not self._available:
             return False
+        try:
+            self._client.delete(key)  # type: ignore
+            return True
+        except Exception as e:
+            _logger.error(f"Redis delete error for key {key}: {e}")
+            return False
+
+    # ---------------------------------------------------------------------
+    def sadd(self, key: str, member: str) -> bool:
+        """向集合 ``key`` 添加成员 ``member``，返回是否成功。"""
+        if not self._available:
+            return False
+
+
+    def smembers(self, key: str) -> set:
+        """返回集合 ``key`` 的所有成员（如果不存在返回空集合）。"""
+        if not self._available:
+            return set()
+        try:
+            members = self._client.smembers(key)  # type: ignore
+            return set(members)
+        except Exception as e:
+            _logger.error(f"Redis smembers error for key {key}: {e}")
+            return set()
         try:
             self._client.delete(key)  # type: ignore
             return True
