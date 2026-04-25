@@ -712,7 +712,25 @@ def create_kg_endpoint(payload: Dict[str, Any]):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ----------------------------------------------------------
+# KG 列表页面端点
+# ----------------------------------------------------------
 @router.get("/kg_page")
+def kg_page():
+    """返回知识图谱列表页面。"""
+    cur_dir = os.path.dirname(__file__)
+    path = os.path.abspath(os.path.join(cur_dir, "..", "frontend", "kg.html"))
+    return FileResponse(path)
+
+# ----------------------------------------------------------
+# Semantic Dictionary 页面端点
+# ----------------------------------------------------------
+@router.get("/semantic_page")
+def semantic_page():
+    """Return the Semantic Dictionary UI page."""
+    cur_dir = os.path.dirname(__file__)
+    path = os.path.abspath(os.path.join(cur_dir, "..", "frontend", "semantic.html"))
+    return FileResponse(path)
 def kg_page():
     """返回知识图谱列表页面。"""
     cur_dir = os.path.dirname(__file__)

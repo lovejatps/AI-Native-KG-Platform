@@ -81,7 +81,8 @@
     <div id="graphContainer" style="flex:1; position:relative; background:#fafafa;">
     </div>
     <!-- 右侧属性编辑面板（Property Panel） -->
-    <div id="propertyPanel" style="width:250px; border-left:1px solid #ddd; padding:8px; overflow:auto; display:none;">
+    <div id="propertyPanel" style="width:400px; border-left:1px solid #ddd; padding:8px; overflow:auto; display:none; position:relative;">
+    <button id="closePropertyPanelBtn" style="position:absolute; top:5px; right:5px; background:none; border:none; font-size:16px; cursor:pointer;" onclick="closePropertyPanel()">✖</button>
       <h3>属性编辑</h3>
       <div id="propContent"></div>
       <button style="margin-top:8px;" onclick="addProperty()">+ 新增属性</button>
@@ -162,6 +163,10 @@
     function closeEditEdgeModal() {
       document.getElementById('editEdgeModal').style.display = 'none';
       selectedEdge = null;
+    }
+    // Close Property Panel
+    function closePropertyPanel() {
+      document.getElementById('propertyPanel').style.display = 'none';
     }
 
 

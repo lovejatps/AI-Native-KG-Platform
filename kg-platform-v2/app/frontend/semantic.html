@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>语义词典管理</title>
+<style>
+body{font-family:Arial,sans-serif;margin:2rem;}
+table{border-collapse:collapse;width:100%;margin-top:1rem;}
+th,td{border:1px solid #ddd;padding:8px;text-align:left;}
+th{background:#f2f2f2;}
+.actions button{margin-right:5px;}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);}
+.modal-content{background:#fff;margin:5% auto;padding:20px;width:400px;border-radius:4px;}
+.modal-content h3{margin-top:0;}
+.modal-content label{display:block;margin-top:10px;}
+.modal-content input,.modal-content textarea{width:100%;padding:5px;}
+</style>
+<script>
+// Dayjs CDN 回退与 extend 容错（若页面未加载 dayjs 也安全）
+if (typeof dayjs === "undefined") { window.dayjs = function(){ return { format:function(){return ""; } }; }; }
+if (dayjs && typeof dayjs.extend === "undefined") { dayjs.extend = function(){}; }
+// 阻止 chrome-extension 资源加载
+const originalCreateElement = document.createElement;
+document.createElement = function(tag){
+  const el = originalCreateElement.call(document, tag);
+  if(tag.toLowerCase()==="script"){
+    const setAttr = el.setAttribute;
+    el.setAttribute = function(name,value){
+      if(name==="src" && value && value.startsWith("chrome-extension://")) return;
+      return setAttr.call(this,name,value);
+    };
+  }
+  return el;
+};
+</script>
+</head>
+<body>
+      <nav style="margin-bottom:1rem;">
+        <a href="/kg_page">知识图谱列表</a> |
+        <a href="/chat">Chat</a> |
+        <a href="/datasources_page">数据源管理</a> | 
+        <a href="/semantic_page">语义词典</a>
+    </nav>
+<div class="tabs"><button id="tabField" class="active" style="margin-right:5px;">字段语义字典</button><button id="tabValue">值映射字典</button></div><div id="fieldSection"><h1>字段语义字典</h1>
+<button id="addFieldBtn">新增字段字典</button>
+<table id="fieldTable"><thead><tr><th>ID</th><th>系统</th><th>表名</th><th>字段名</th><th>同义词</th><th>描述</th><th>操作</th></tr></thead><tbody></tbody></table>
+</div>
+<div id="valueSection" style="display:none">
+  <h1>值映射字典</h1>
+  <button id="addValueBtn">新增值映射</button>
+  <table id="valueTable"><thead><tr><th>ID</th><th>系统</th><th>表名</th><th>字段名</th><th>展示值</th><th>实际值</th><th>同义词</th><th>操作</th></tr></thead><tbody></tbody></table>
+</div>
+<div id="modal" class="modal"><div class="modal-content"><h3 id="modalTitle"></h3><form id="modalForm"><div id="formFields"></div><div style="margin-top:10px;text-align:right;"><button type="button" id="cancelBtn">取消</button><button type="submit" id="saveBtn">保存</button></div></form></div></div>
+<script>
+let globalHierarchy = {};
+function systemChange(e){
+  const sys = e.target.value;
+  const libSelect = document.querySelector('select[name="library"]');
+  libSelect.innerHTML='';
+  const libs = globalHierarchy[sys] ? Object.keys(globalHierarchy[sys].libraries) : [];
+  libs.forEach(v=>{ const opt=document.createElement('option'); opt.value=v; opt.textContent=v; libSelect.appendChild(opt); });
+  libSelect.dispatchEvent(new Event('change'));
+}
+function libraryChange(e){
+  const sys = document.querySelector('select[name="library_name"]').value;
+  const lib = e.target.value;
+  const tblSelect = document.querySelector('select[name="table_name"]');
+  tblSelect.innerHTML='';
+  const tables = globalHierarchy[sys]?.libraries[lib]?.tables ? Object.keys(globalHierarchy[sys].libraries[lib].tables) : [];
+  tables.forEach(v=>{ const opt=document.createElement('option'); opt.value=v; opt.textContent=v; tblSelect.appendChild(opt); });
+  tblSelect.dispatchEvent(new Event('change'));
+}
+function tableChange(e){
+  const sys = document.querySelector('select[name="library_name"]').value;
+  const lib = document.querySelector('select[name="library"]').value;
+  const tbl = e.target.value;
+  const colSelect = document.querySelector('select[name="column_name"]');
+  colSelect.innerHTML='';
+  const cols = globalHierarchy[sys]?.libraries[lib]?.tables[tbl]?.columns || [];
+  cols.forEach(v=>{ const opt=document.createElement('option'); opt.value=v; opt.textContent=v; colSelect.appendChild(opt); });
+}
+function showModal(title, fields, onSubmit){
+  document.getElementById('modalTitle').textContent=title;
+  const container=document.getElementById('formFields');
+  container.innerHTML='';
+  fields.forEach(f=>{
+    const label=document.createElement('label');
+    label.textContent=f.label;
+    let input;
+    if (f.type==='select') {
+      input=document.createElement('select');
+      (f.options||[]).forEach(opt=>{
+        const o=document.createElement('option');
+        o.value=opt.value;
+        o.textContent=opt.label;
+        if (opt.selected) o.selected=true;
+        input.appendChild(o);
+      });
+    } else {
+      input=f.type==='textarea'?document.createElement('textarea'):document.createElement('input');
+    }
+    input.name=f.name;
+    if(f.required) input.required=true;
+    if(f.placeholder) input.placeholder=f.placeholder;
+    if(f.value!==undefined) input.value=f.value;
+    // 对 select 进行回显后触发 change，确保级联下拉同步
+    if(f.type==='select' && f.value!==undefined){
+      setTimeout(()=>{input.dispatchEvent(new Event('change'));},0);
+    }
+    if(f.type==='textarea'){input.rows=2;}
+    if (typeof f.onChange === 'function') {
+      input.addEventListener('change', f.onChange);
+    }
+    label.appendChild(input);
+    container.appendChild(label);
+  });
+  const form=document.getElementById('modalForm');
+  form.onsubmit=function(e){
+    e.preventDefault();
+    const data={};
+    fields.forEach(f=>{data[f.name]=form.elements[f.name].value;});
+    onSubmit(data);
+  };
+  document.getElementById('modal').style.display='block';
+}
+function closeModal(){ document.getElementById('modal').style.display='none'; }
+// Tab switching logic
+document.getElementById('tabField').onclick=function(){
+  document.getElementById('tabField').classList.add('active');
+  document.getElementById('tabValue').classList.remove('active');
+  document.getElementById('fieldSection').style.display='block';
+  document.getElementById('valueSection').style.display='none';
+};
+document.getElementById('tabValue').onclick=function(){
+  document.getElementById('tabValue').classList.add('active');
+  document.getElementById('tabField').classList.remove('active');
+  document.getElementById('fieldSection').style.display='none';
+  document.getElementById('valueSection').style.display='block';
+};
+document.getElementById('cancelBtn').onclick=closeModal;
+// ---------- Field Dictionary ----------
+function loadFields(){
+  fetch('/semantic/fields?limit=1000')
+    .then(r=>r.json())
+    .then(d=>{
+      const tbody=document.querySelector('#fieldTable tbody');
+      tbody.innerHTML='';
+      d.items.forEach(item=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${item.id}</td><td>${item.library_name||''}</td><td>${item.table_name}</td><td>${item.column_name}</td><td>${(item.synonyms||[]).join(', ')}</td><td>${item.description||''}</td><td class="actions"><button data-id="${item.id}" class="editField">编辑</button><button data-id="${item.id}" class="delField">删除</button></td>`;
+        tbody.appendChild(tr);
+      });
+      document.querySelectorAll('.editField').forEach(btn=>btn.onclick=()=>editField(btn.dataset.id));
+      document.querySelectorAll('.delField').forEach(btn=>btn.onclick=()=>deleteField(btn.dataset.id));
+    });
+}
+function addField(){
+  // Build cascading options from datasources and their schemas
+  fetch('/datasources')
+    .then(r=>r.json())
+    .then(dsData=>{
+      const dsList = dsData.datasources || [];
+      const hierarchy = {};
+      const promises = dsList.map(ds=>
+        fetch(`/datasources/${ds.id}/schema`)
+          .then(r=>r.json())
+          .then(schema=>{
+            const sys = ds.system_name || '';
+            const lib = ds.database || '';
+            hierarchy[sys] = hierarchy[sys] || { libraries: {} };
+            const libObj = hierarchy[sys].libraries[lib] = hierarchy[sys].libraries[lib] || { tables: {} };
+            schema.tables.forEach(tbl=>{
+              const tblObj = libObj.tables[tbl.name] = libObj.tables[tbl.name] || { columns: [] };
+              tbl.columns.forEach(col=>{ tblObj.columns.push(col.name); });
+            });
+          })
+      );
+      Promise.all(promises).then(()=>{globalHierarchy = hierarchy;
+        // Prepare initial system options
+        const systemOpts = Object.keys(hierarchy).map(v=>({value:v,label:v}));
+        const fields = [
+            {name:'library_name',label:'系统',type:'select',options:systemOpts, onChange:systemChange, required:true},
+            {name:'library',label:'库名',type:'select',options:[], onChange:libraryChange},
+            {name:'table_name',label:'表名',type:'select',options:[], onChange:tableChange, required:true},
+            {name:'column_name',label:'字段名',type:'select',options:[], required:true},
+          {name:'synonyms',label:'同义词(JSON数组)',placeholder:'["a","b"]',required:false},
+          {name:'description',label:'描述',type:'textarea',required:false}
+        ];
+        // Change handlers will be bound inside showModal after creation
+        showModal('新增字段字典',fields, data=>{
+          if(data.synonyms){try{data.synonyms=JSON.parse(data.synonyms)}catch(e){alert('同义词需JSON数组');return;}}
+          // map selected values to expected field names
+          const payload = {
+            library_name: data.library_name,
+            library_name2: data.library, // placeholder for actual library field if needed
+            table_name: data.table_name,
+            column_name: data.column_name,
+            synonyms: data.synonyms,
+            description: data.description
+          };
+          // remove temporary key if not needed
+          delete payload.library_name2;
+          fetch('/semantic/fields',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+            .then(r=>{if(r.ok){closeModal();loadFields();}else r.json().then(e=>alert(e.detail||'失败'));});
+        });
+        // Auto-select first system and trigger cascade
+        const sysSelect = document.querySelector('select[name="library_name"]');
+        if(sysSelect && sysSelect.options.length>0){
+            sysSelect.value = sysSelect.options[0].value;
+            sysSelect.dispatchEvent(new Event('change'));
+        }
+        // Attach cascades after modal is rendered
+function systemChange(e){
+  const sys = e.target.value;
+  const libSelect = document.querySelector('select[name="library"]');
+  libSelect.innerHTML='';
+  const libs = hierarchy[sys] ? Object.keys(hierarchy[sys].libraries) : [];
+  libs.forEach(v=>{ const opt=document.createElement('option'); opt.value=v; opt.textContent=v; libSelect.appendChild(opt); });
+  // 自动选中第一个库名（若存在）并触发后续级联
+  if(libs.length>0){
+    libSelect.value = libs[0];
+    libSelect.dispatchEvent(new Event('change'));
+  } else {
+    // 若无库，则直接触发清空后级联
+    libSelect.dispatchEvent(new Event('change'));
+  }
+}
+function libraryChange(e){
+  const sys = document.querySelector('select[name="library_name"]').value;
+  const lib = e.target.value;
+  const tblSelect = document.querySelector('select[name="table_name"]');
+  tblSelect.innerHTML='';
+  const tables = hierarchy[sys]?.libraries[lib]?.tables?Object.keys(hierarchy[sys].libraries[lib].tables):[];
+  tables.forEach(v=>{const opt=document.createElement('option');opt.value=v;opt.textContent=v;tblSelect.appendChild(opt);});
+  // 自动选中第一个表（若存在）并触发列级联
+  if(tables.length>0){
+    tblSelect.value = tables[0];
+    tblSelect.dispatchEvent(new Event('change'));
+  } else {
+    tblSelect.dispatchEvent(new Event('change'));
+  }
+}
+        function tableChange(e){
+          const sys = document.querySelector('select[name="library_name"]').value;
+          const lib = document.querySelector('select[name="library"]').value;
+          const tbl = e.target.value;
+          const colSelect = document.querySelector('select[name="column_name"]');
+          colSelect.innerHTML='';
+          const cols = hierarchy[sys]?.libraries[lib]?.tables[tbl]?.columns || [];
+          cols.forEach(v=>{ const opt=document.createElement('option'); opt.value=v; opt.textContent=v; colSelect.appendChild(opt); });
+        }
+      });
+    });
+}
+function editField(id){
+  // Load current item and build cascading options from datasources
+  fetch('/semantic/fields?limit=1000')
+    .then(r=>r.json())
+    .then(d=>{
+      const item=d.items.find(i=>i.id==id);
+      if(!item){alert('未找到');return;}
+      // Build hierarchy same as addField
+      fetch('/datasources')
+        .then(r=>r.json())
+        .then(dsData=>{
+          const dsList = dsData.datasources || [];
+          const hierarchy = {};
+          const promises = dsList.map(ds=>
+            fetch(`/datasources/${ds.id}/schema`)
+              .then(r=>r.json())
+              .then(schema=>{
+                const sys = ds.system_name || '';
+                const lib = ds.database || '';
+                hierarchy[sys] = hierarchy[sys] || { libraries: {} };
+                const libObj = hierarchy[sys].libraries[lib] = hierarchy[sys].libraries[lib] || { tables: {} };
+                schema.tables.forEach(tbl=>{
+                  const tblObj = libObj.tables[tbl.name] = libObj.tables[tbl.name] || { columns: [] };
+                  tbl.columns.forEach(col=>{ tblObj.columns.push(col.name); });
+                });
+              })
+          );
+          Promise.all(promises).then(()=>{globalHierarchy = hierarchy;
+            const systemOpts = Object.keys(hierarchy).map(v=>({value:v,label:v}));
+// Determine library (database) name that contains the target table
+            const sysName = item.library_name||'';
+            let libName = '';
+            if (hierarchy[sysName]) {
+              const libs = Object.keys(hierarchy[sysName].libraries);
+              libName = libs.find(l=> hierarchy[sysName].libraries[l].tables && hierarchy[sysName].libraries[l].tables[item.table_name]) || (libs[0]||'');
+            }
+            const fields = [
+              {name:'library_name',label:'系统',type:'select',options:systemOpts, value:item.library_name||'', onChange:systemChange, required:true},
+              {name:'library',label:'库名',type:'select',options:[], value:libName , onChange:libraryChange},
+              {name:'table_name',label:'表名',type:'select',options:[], value:item.table_name, onChange:tableChange, required:true},
+              {name:'column_name',label:'字段名',type:'select',options:[], value:item.column_name, required:true},
+              {name:'synonyms',label:'同义词(JSON数组)',value:JSON.stringify(item.synonyms||[]),required:false},
+              {name:'description',label:'描述',type:'textarea',value:item.description||''}
+            ];
+            showModal('编辑字段字典',fields,data=>{
+          if(data.synonyms){try{data.synonyms=JSON.parse(data.synonyms)}catch(e){alert('同义词需JSON数组');return;}}
+          // 必填校验
+          if(!data.library_name || !data.table_name || !data.column_name){
+            alert('系统、表名、字段名均为必填项');
+            return;
+          }
+              const payload = {
+                library_name: data.library_name,
+                table_name: data.table_name,
+                column_name: data.column_name,
+                synonyms: data.synonyms,
+                description: data.description
+              };
+              fetch(`/semantic/fields/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+.then(r=>{if(r.ok){closeModal();loadFields();}else r.json().then(e=>{ const msg = Array.isArray(e.detail) ? e.detail.map(d=>d.msg||d).join('\n') : JSON.stringify(e.detail); alert(msg || '失败'); });});
+            });
+            // Auto-select for edit (populate cascades with existing values)
+            setTimeout(()=>{
+                const sysSelect=document.querySelector('select[name="library_name"]');
+                if(sysSelect){
+                    sysSelect.value = item.library_name;
+                    sysSelect.dispatchEvent(new Event('change'));
+                }
+                setTimeout(()=>{
+                    const libSelect=document.querySelector('select[name="library"]');
+                    const sys=item.library_name;
+                    const libs = hierarchy[sys] ? Object.keys(hierarchy[sys].libraries) : [];
+                    const targetLib = libs.find(l=> hierarchy[sys].libraries[l].tables && hierarchy[sys].libraries[l].tables[item.table_name]);
+                    if(targetLib){
+                        libSelect.value = targetLib;
+                        libSelect.dispatchEvent(new Event('change'));
+                    } else if(libs.length>0){
+                        libSelect.value = libs[0];
+                        libSelect.dispatchEvent(new Event('change'));
+                    }
+                    setTimeout(()=>{
+                        const tblSelect=document.querySelector('select[name="table_name"]');
+                        tblSelect.value = item.table_name;
+                        tblSelect.dispatchEvent(new Event('change'));
+                        setTimeout(()=>{
+                            const colSelect=document.querySelector('select[name="column_name"]');
+                            colSelect.value = item.column_name;
+                        },0);
+                    },0);
+                },0);
+            },0);
+            // cascade handlers (same as addField)
+function systemChange(e){
+              const sys = e.target.value;
+              const libSelect = document.querySelector('select[name="library"]');
+              libSelect.innerHTML='';
+              const libs=globalHierarchy[sys]?Object.keys(globalHierarchy[sys].libraries):[];
+              libs.forEach(v=>{const opt=document.createElement('option');opt.value=v;opt.textContent=v;libSelect.appendChild(opt);});
+              libSelect.dispatchEvent(new Event('change'));
+            }
+            function libraryChange(e){
+              const sys=document.querySelector('select[name="library_name"]').value;
+              const lib=e.target.value;
+              const tblSelect=document.querySelector('select[name="table_name"]');
+              tblSelect.innerHTML='';
+              const tables=globalHierarchy[sys]?.libraries[lib]?.tables?Object.keys(globalHierarchy[sys].libraries[lib].tables):[];
+              tables.forEach(v=>{const opt=document.createElement('option');opt.value=v;opt.textContent=v;tblSelect.appendChild(opt);});
+              tblSelect.dispatchEvent(new Event('change'));
+            }
+            function tableChange(e){
+              const sys=document.querySelector('select[name="library_name"]').value;
+              const lib=document.querySelector('select[name="library"]').value;
+              const tbl=e.target.value;
+              const colSelect=document.querySelector('select[name="column_name"]');
+              colSelect.innerHTML='';
+              const cols=globalHierarchy[sys]?.libraries[lib]?.tables[tbl]?.columns||[];
+              cols.forEach(v=>{const opt=document.createElement('option');opt.value=v;opt.textContent=v;colSelect.appendChild(opt);});
+            }
+            function libraryChange(e){
+              const sys=document.querySelector('select[name="library_name"]').value;
+              const lib=e.target.value;
+              const tblSelect=document.querySelector('select[name="table_name"]');
+              tblSelect.innerHTML='';
+              const tables=hierarchy[sys]?.libraries[lib]?.tables?Object.keys(hierarchy[sys].libraries[lib].tables):[];
+              tables.forEach(v=>{const opt=document.createElement('option');opt.value=v;opt.textContent=v;tblSelect.appendChild(opt);});
+              tblSelect.dispatchEvent(new Event('change'));
+            }
+            function tableChange(e){
+              const sys=document.querySelector('select[name="library_name"]').value;
+              const lib=document.querySelector('select[name="library"]').value;
+              const tbl=e.target.value;
+              const colSelect=document.querySelector('select[name="column_name"]');
+              colSelect.innerHTML='';
+              const cols=hierarchy[sys]?.libraries[lib]?.tables[tbl]?.columns||[];
+              cols.forEach(v=>{const opt=document.createElement('option');opt.value=v;opt.textContent=v;colSelect.appendChild(opt);});
+            }
+          });
+        });
+    });
+}
+function deleteField(id){
+  if(!confirm('确定删除？')) return;
+  fetch(`/semantic/fields/${id}`,{method:'DELETE'}).then(r=>{if(r.ok)loadFields();else alert('删除失败');});
+}
+document.getElementById('addFieldBtn').onclick=addField;
+// ---------- Value Dictionary ----------
+function loadValues(){
+  fetch('/semantic/values?limit=1000')
+    .then(r=>r.json())
+    .then(d=>{
+      const tbody=document.querySelector('#valueTable tbody');
+      tbody.innerHTML='';
+      d.items.forEach(item=>{
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${item.id}</td><td>${item.library_name||''}</td><td>${item.table_name}</td><td>${item.column_name}</td><td>${item.display_value}</td><td>${item.actual_value}</td><td>${(item.synonyms||[]).join(', ')}</td><td class="actions"><button data-id="${item.id}" class="editValue">编辑</button><button data-id="${item.id}" class="delValue">删除</button></td>`;
+        tbody.appendChild(tr);
+      });
+      document.querySelectorAll('.editValue').forEach(btn=>btn.onclick=()=>editValue(btn.dataset.id));
+      document.querySelectorAll('.delValue').forEach(btn=>btn.onclick=()=>deleteValue(btn.dataset.id));
+    });
+}
+function addValue(){
+  // Build cascading options from datasources for system, library, table, column
+  fetch('/datasources')
+    .then(r=>r.json())
+    .then(dsData=>{
+      const dsList = dsData.datasources || [];
+      const hierarchy = {};
+      const promises = dsList.map(ds=>
+        fetch(`/datasources/${ds.id}/schema`)
+          .then(r=>r.json())
+          .then(schema=>{
+            const sys = ds.system_name || '';
+            const lib = ds.database || '';
+            hierarchy[sys] = hierarchy[sys] || { libraries: {} };
+            const libObj = hierarchy[sys].libraries[lib] = hierarchy[sys].libraries[lib] || { tables: {} };
+            schema.tables.forEach(tbl=>{
+              const tblObj = libObj.tables[tbl.name] = libObj.tables[tbl.name] || { columns: [] };
+              tbl.columns.forEach(col=>{ tblObj.columns.push(col.name); });
+            });
+          })
+      );
+      Promise.all(promises).then(()=>{globalHierarchy = hierarchy;
+        const systemOpts = Object.keys(hierarchy).map(v=>({value:v,label:v}));
+        const fields = [
+          {name:'library_name',label:'系统',type:'select',options:systemOpts, onChange:systemChange, required:true},
+          {name:'library',label:'库名',type:'select',options:[], onChange:libraryChange, required:true},
+          {name:'table_name',label:'表名',type:'select',options:[], onChange:tableChange, required:true},
+          {name:'column_name',label:'字段名',type:'select',options:[], required:true},
+          {name:'display_value',label:'展示值',required:true},
+          {name:'actual_value',label:'实际值',required:true},
+          {name:'synonyms',label:'同义词(JSON数组)',placeholder:'["a","b"]',required:false}
+        ];
+        showModal('新增值映射',fields,data=>{
+          if(data.synonyms){try{data.synonyms=JSON.parse(data.synonyms)}catch(e){alert('同义词需JSON数组');return;}}
+          // 必填校验
+          if(!data.library_name || !data.library || !data.table_name || !data.column_name){
+            alert('系统、库名、表名、字段名均为必填项');
+            return;
+          }
+          fetch('/semantic/values',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+            .then(r=>{if(r.ok){closeModal();loadValues();}else r.json().then(e=>{ const msg = Array.isArray(e.detail) ? e.detail.map(d=>d.msg||d).join('\n') : JSON.stringify(e.detail); alert(msg || '失败'); });});
+        });
+        // Auto-select first system and trigger cascade
+        const sysSelect=document.querySelector('select[name="library_name"]');
+        if(sysSelect && sysSelect.options.length>0){
+          sysSelect.value = sysSelect.options[0].value;
+          sysSelect.dispatchEvent(new Event('change'));
+        }
+      });
+    });
+}
+function editValue(id){
+  // Load current item and build cascading options from datasources
+  fetch('/semantic/values?limit=1000')
+    .then(r=>r.json())
+    .then(d=>{
+      const item=d.items.find(i=>i.id==id);
+      if(!item){alert('未找到');return;}
+      // Build hierarchy same as addValue
+      fetch('/datasources')
+        .then(r=>r.json())
+        .then(dsData=>{
+          const dsList = dsData.datasources || [];
+          const hierarchy = {};
+          const promises = dsList.map(ds=>
+            fetch(`/datasources/${ds.id}/schema`)
+              .then(r=>r.json())
+              .then(schema=>{
+                const sys = ds.system_name || '';
+                const lib = ds.database || '';
+                hierarchy[sys] = hierarchy[sys] || { libraries: {} };
+                const libObj = hierarchy[sys].libraries[lib] = hierarchy[sys].libraries[lib] || { tables: {} };
+                schema.tables.forEach(tbl=>{
+                  const tblObj = libObj.tables[tbl.name] = libObj.tables[tbl.name] || { columns: [] };
+                  tbl.columns.forEach(col=>{ tblObj.columns.push(col.name); });
+                });
+              })
+          );
+          Promise.all(promises).then(()=>{globalHierarchy = hierarchy;
+            // Determine library that contains the table
+            const sysName = item.library_name||'';
+            let libName='';
+            if (hierarchy[sysName]) {
+              const libs = Object.keys(hierarchy[sysName].libraries);
+              libName = libs.find(l=> hierarchy[sysName].libraries[l].tables && hierarchy[sysName].libraries[l].tables[item.table_name]) || (libs[0]||'');
+            }
+            const fields = [
+              {name:'library_name',label:'系统',type:'select',options:Object.keys(hierarchy).map(v=>({value:v,label:v})), value:item.library_name||'', onChange:systemChange, required:true},
+              {name:'library',label:'库名',type:'select',options:[], value:libName , onChange:libraryChange, required:true},
+              {name:'table_name',label:'表名',type:'select',options:[], value:item.table_name, onChange:tableChange, required:true},
+              {name:'column_name',label:'字段名',type:'select',options:[], value:item.column_name, required:true},
+              {name:'display_value',label:'展示值',value:item.display_value,required:true},
+              {name:'actual_value',label:'实际值',value:item.actual_value,required:true},
+              {name:'synonyms',label:'同义词(JSON数组)',value:JSON.stringify(item.synonyms||[]),required:false}
+            ];
+            showModal('编辑值映射',fields,data=>{
+              if(data.synonyms){try{data.synonyms=JSON.parse(data.synonyms)}catch(e){alert('同义词需JSON数组');return;}}
+              // 必填校验
+              if(!data.library_name || !data.library || !data.table_name || !data.column_name){
+                alert('系统、库名、表名、字段名均为必填项');
+                return;
+              }
+              fetch(`/semantic/values/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+                .then(r=>{if(r.ok){closeModal();loadValues();}else r.json().then(e=>{ const msg = Array.isArray(e.detail) ? e.detail.map(d=>d.msg||d).join('\n') : JSON.stringify(e.detail); alert(msg || '失败'); });});
+            });
+            // Auto-select cascade for edit
+            setTimeout(()=>{
+                const sysSelect=document.querySelector('select[name="library_name"]');
+                if(sysSelect){
+                    sysSelect.value = item.library_name;
+                    sysSelect.dispatchEvent(new Event('change'));
+                }
+                setTimeout(()=>{
+                    const libSelect=document.querySelector('select[name="library"]');
+                    const sys=item.library_name;
+                    const libs = hierarchy[sys] ? Object.keys(hierarchy[sys].libraries) : [];
+                    const targetLib = libs.find(l=> hierarchy[sys].libraries[l].tables && hierarchy[sys].libraries[l].tables[item.table_name]);
+                    if(targetLib){
+                        libSelect.value = targetLib;
+                        libSelect.dispatchEvent(new Event('change'));
+                    } else if(libs.length>0){
+                        libSelect.value = libs[0];
+                        libSelect.dispatchEvent(new Event('change'));
+                    }
+                    setTimeout(()=>{
+                        const tblSelect=document.querySelector('select[name="table_name"]');
+                        tblSelect.value = item.table_name;
+                        tblSelect.dispatchEvent(new Event('change'));
+                        setTimeout(()=>{
+                            const colSelect=document.querySelector('select[name="column_name"]');
+                            colSelect.value = item.column_name;
+                        },0);
+                    },0);
+                },0);
+            },0);
+          });
+        });
+    });
+}
+function deleteValue(id){
+  if(!confirm('确定删除？')) return;
+  fetch(`/semantic/values/${id}`,{method:'DELETE'}).then(r=>{if(r.ok)loadValues();else alert('删除失败');});
+}
+document.getElementById('addValueBtn').onclick=addValue;
+// initial load
+loadFields();
+loadValues();
+</script>
+</body>
+</html>

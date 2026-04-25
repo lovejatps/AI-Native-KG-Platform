@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from app.api.routes import router  # type: ignore
+from app.api.semantic_dict import router as semantic_router  # type: ignore
 from app.auth.router import router as auth_router  # type: ignore
 
 from fastapi.staticfiles import StaticFiles
@@ -52,6 +53,7 @@ frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "frontend
 app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
 
 app.include_router(router)
+app.include_router(semantic_router)
 app.include_router(auth_router)
 
 

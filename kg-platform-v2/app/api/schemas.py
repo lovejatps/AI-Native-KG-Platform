@@ -4,8 +4,8 @@ Existing schemas for auth are defined in `app/auth/schemas.py`. This file
 contains shared request/response models for other endpoints.
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional, Literal
+from pydantic import BaseModel, Field, validator
+from typing import Optional, Literal, List
 
 
 class DataSourceCreate(BaseModel):
@@ -28,3 +28,68 @@ class DataSourceUpdate(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
     database: Optional[str] = None
+
+# ---------------------------------------------------------------------------
+# Semantic Dictionary schemas (字段语义字典 & 值映射字典)
+# ---------------------------------------------------------------------------
+
+class FieldDictBase(BaseModel):
+    library_name: Optional[str] = None
+    table_name: str = Field(..., description="所属表名")
+    column_name: str = Field(..., description="字段名")
+    synonyms: List[str] = Field(default_factory=list, description="同义词 JSON 数组")
+    description: Optional[str] = None
+
+    @validator("synonyms", pre=True)
+    def ensure_list(cls, v):
+        if isinstance(v, str):
+            import json
+            try:
+                return json.loads(v)
+            except Exception:
+                raise ValueError("synonyms 必须是 JSON 数组")
+        return v
+
+class FieldDictCreate(FieldDictBase):
+    pass
+
+class FieldDictUpdate(FieldDictBase):
+    pass
+
+class FieldDictOut(FieldDictBase):
+    id: int
+
+class PagedFieldDictResponse(BaseModel):
+    total: int
+    items: List[FieldDictOut]
+
+class ValueDictBase(BaseModel):
+    library_name: Optional[str] = None
+    table_name: str = Field(..., description="所属表名")
+    column_name: str = Field(..., description="关联字段名")
+    display_value: str = Field(..., description="前端显示值")
+    actual_value: str = Field(..., description="数据库实际值")
+    synonyms: List[str] = Field(default_factory=list, description="值同义词 JSON 数组")
+
+    @validator("synonyms", pre=True)
+    def ensure_list(cls, v):
+        if isinstance(v, str):
+            import json
+            try:
+                return json.loads(v)
+            except Exception:
+                raise ValueError("synonyms 必须是 JSON 数组")
+        return v
+
+class ValueDictCreate(ValueDictBase):
+    pass
+
+class ValueDictUpdate(ValueDictBase):
+    pass
+
+class ValueDictOut(ValueDictBase):
+    id: int
+
+class PagedValueDictResponse(BaseModel):
+    total: int
+    items: List[ValueDictOut]

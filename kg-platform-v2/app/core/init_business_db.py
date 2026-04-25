@@ -41,16 +41,6 @@ def init_business_db() -> None:
     # Create tables
     cur.executescript(
         """
-        CREATE TABLE IF NOT EXISTS grade (
-            id   INTEGER PRIMARY KEY,
-            name TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS class (
-            id       INTEGER PRIMARY KEY,
-            name     TEXT NOT NULL,
-            grade_id INTEGER NOT NULL,
-            FOREIGN KEY (grade_id) REFERENCES grade(id)
-        );
         CREATE TABLE IF NOT EXISTS student (
             id       INTEGER PRIMARY KEY,
             name     TEXT NOT NULL,
@@ -59,8 +49,78 @@ def init_business_db() -> None:
             age      INTEGER,
             FOREIGN KEY (class_id) REFERENCES class(id)
         );
+        CREATE TABLE IF NOT EXISTS grade (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS class (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            grade_id INTEGER NOT NULL,
+            FOREIGN KEY (grade_id) REFERENCES grade(id)
+        );
         """
     )
+    # ----------------------------------------------------------
+    # 语义词典表（字段语义）
+    # ----------------------------------------------------------
+    cur.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS field_dictionary (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            library_name VARCHAR(50),
+            table_name VARCHAR(50) NOT NULL,
+            column_name VARCHAR(50) NOT NULL,
+            synonyms TEXT, -- JSON array
+            description VARCHAR(255)
+        );
+        """
+    )
+    # ----------------------------------------------------------
+    # 语义词典表（值映射）
+    # ----------------------------------------------------------
+    cur.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS value_dictionary (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            library_name VARCHAR(50),
+            table_name VARCHAR(50) NOT NULL,
+            column_name VARCHAR(50) NOT NULL,
+            display_value VARCHAR(50) NOT NULL,
+            actual_value VARCHAR(50) NOT NULL,
+            synonyms TEXT -- JSON array
+        );
+        """
+    );
+    # ----------------------------------------------------------
+    # 示例数据（仅供演示） - 若已存在则跳过插入
+    # ----------------------------------------------------------
+    # Check whether the dictionary tables already contain data.
+    # If any rows exist, we assume the database has been seeded and skip further inserts.
+    cur.execute("SELECT COUNT(*) FROM field_dictionary")
+    if cur.fetchone()[0] > 0:
+        # Seed data already present; skip remaining inserts.
+        conn.commit()
+        conn.close()
+        return
+
+    cur.executemany(
+        "INSERT OR IGNORE INTO field_dictionary (library_name, table_name, column_name, synonyms, description) VALUES (?, ?, ?, ?, ?)",
+        [
+            ("SchoolA", "student", "gender", "[\"性别\",\"男女\",\"男生\",\"女生\"]", "学生性别字段"),
+            ("SchoolA", "grade", "name", "[\"年级\",\"几年级\",\"高一\",\"高二\"]", "年级名称"),
+            ("SchoolA", "class", "name", "[\"班级\",\"几班\",\"1班\",\"2班\"]", "班级名称")
+        ]
+    )
+    cur.executemany(
+        "INSERT OR IGNORE INTO value_dictionary (library_name, table_name, column_name, display_value, actual_value, synonyms) VALUES (?, ?, ?, ?, ?, ?)",
+        [
+            ("SchoolA", "student", "gender", "男", "M", "[\"男\",\"男生\",\"男性\",\"male\"]"),
+            ("SchoolA", "student", "gender", "女", "F", "[\"女\",\"女生\",\"女性\",\"female\"]"),
+            ("SchoolA", "grade", "name", "一年级", "一年级", "[\"一年级\",\"高一\",\"1年级\"]")
+        ]
+    );
+
 
     # Insert sample data – use INSERT OR IGNORE to avoid duplicates on repeated runs
     cur.executemany(
