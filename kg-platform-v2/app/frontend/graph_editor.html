@@ -29,6 +29,35 @@
     <button onclick="closeFieldMapModal()">取消</button>
   </div>
 </div>
+<!-- 新增字段字典弹窗 -->
+<div id="fieldDictModal" class="modal">
+  <div class="modal-content">
+    <h3>新增字段字典</h3>
+    <label>系统: <select id="fdSystem" required></select></label><br><br>
+    <label>数据库: <select id="fdDatabase" required></select></label><br><br>
+    <label>表: <select id="fdTable" required></select></label><br><br>
+    <label>属性: <select id="fdColumn" required></select></label><br><br>
+    <label>同义词 (JSON数组): <input type="text" id="fdSynonyms" placeholder='["syn1","syn2"]' style="width:100%"/></label><br><br>
+    <label>描述: <textarea id="fdDescription" rows="3" style="width:100%"></textarea></label><br><br>
+    <button onclick="saveFieldDict()">保存</button>
+    <button onclick="closeFieldDictModal()">取消</button>
+  </div>
+</div>
+<!-- 值映射字典弹窗 -->
+<div id="valueDictModal" class="modal">
+  <div class="modal-content">
+    <h3>新增值映射字典</h3>
+    <label>系统: <select id="vdSystem" required></select></label><br><br>
+    <label>数据库: <select id="vdDatabase" required></select></label><br><br>
+    <label>表: <select id="vdTable" required></select></label><br><br>
+    <label>属性: <select id="vdColumn" required></select></label><br><br>
+    <label>展示值: <input type="text" id="vdDisplay" style="width:100%"/></label><br><br>
+    <label>实际值: <input type="text" id="vdActual" style="width:100%"/></label><br><br>
+    <label>同义词 (JSON数组): <input type="text" id="vdSynonyms" placeholder='["syn1"]' style="width:100%"/></label><br><br>
+    <button onclick="saveValueDict()">保存</button>
+    <button onclick="closeValueDictModal()">取消</button>
+  </div>
+</div>
   <!-- 顶部栏（关键控制区） -->
   <div style="padding:8px; background:#f5f5f5; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd;">
     <div>数据源：<span id="dataSourceInfo">车队系统</span> | Schema版本：<span id="schemaVersionInfo">v1.2</span></div>
@@ -355,6 +384,202 @@ function closeFieldMapModal() {
   document.getElementById('fieldMapModal').style.display = 'none';
 }
 
+// ---------- 新增字段字典 ----------
+async function openFieldDictModal(entity=null, idx=null) {
+  // 若全局数据源尚未加载，先加载一次
+  if (availableSystems.length===0) {
+    await loadDataSources();
+  }
+
+  const sysSelect = document.getElementById('fdSystem');
+  const dbSelect = document.getElementById('fdDatabase');
+  const tblSelect = document.getElementById('fdTable');
+  const colSelect = document.getElementById('fdColumn');
+  // Clear options
+  sysSelect.innerHTML = '';
+  dbSelect.innerHTML = '';
+  tblSelect.innerHTML = '';
+  colSelect.innerHTML = '';
+  // Populate systems
+  availableSystems.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = s; sysSelect.appendChild(opt);
+  });
+  // System change -> load databases
+  sysSelect.onchange = async () => {
+    const sys = sysSelect.value;
+    const dbs = systemDatabases[sys] || [];
+    dbSelect.innerHTML = '';
+    dbs.forEach(d => {
+      const opt = document.createElement('option'); opt.value = d; opt.textContent = d; dbSelect.appendChild(opt);
+    });
+    if (dbs.length) dbSelect.dispatchEvent(new Event('change'));
+  };
+  // Database change -> load tables
+  dbSelect.onchange = async () => {
+    const sys = sysSelect.value;
+    const db = dbSelect.value;
+    const dsId = dsIdMap[`${sys}|${db}`];
+    if (!dsId) { alert('未找到对应的数据源'); return; }
+    await loadSchemaForDatasource(dsId);
+    tblSelect.innerHTML = '';
+    Object.keys(databaseTables).forEach(t => {
+      const opt = document.createElement('option'); opt.value = t; opt.textContent = t; tblSelect.appendChild(opt);
+    });
+    if (Object.keys(databaseTables).length) tblSelect.dispatchEvent(new Event('change'));
+  };
+  // Table change -> load columns
+  tblSelect.onchange = () => {
+    const t = tblSelect.value;
+    const cols = databaseTables[t] || [];
+    colSelect.innerHTML = '';
+    cols.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; colSelect.appendChild(opt); });
+  };
+  // Init first level
+  if (availableSystems.length) sysSelect.dispatchEvent(new Event('change'));
+  // Show modal
+  if (entity && typeof idx === 'number') {
+  const p = entityProps[entity][idx];
+  if (p && p.origField) {
+    const parts = p.origField.split('|');
+    if (parts.length===4) {
+      const [sys, db, tbl, col] = parts;
+      sysSelect.value = sys;
+      sysSelect.disabled = true;
+      await sysSelect.onchange?.();
+      dbSelect.value = db;
+      dbSelect.disabled = true;
+      await dbSelect.onchange?.();
+      tblSelect.value = tbl;
+      tblSelect.disabled = true;
+      await tblSelect.onchange?.();
+      colSelect.value = col;
+colSelect.disabled = true;
+        // 检查字段字典是否已存在，若存在则回显同义词和描述
+        try {
+          const resp = await fetch(`/semantic/fields?search=${encodeURIComponent(col)}`);
+          const data = await resp.json();
+          const existing = (data.items||[]).find(i => i.library_name===sys && i.table_name===tbl && i.column_name===col);
+          if (existing) {
+            document.getElementById('fdSynonyms').value = JSON.stringify(existing.synonyms||[]);
+            document.getElementById('fdDescription').value = existing.description||'';
+          }
+        } catch(e){ /* ignore */ }
+      }
+    }
+  }
+  document.getElementById('fieldDictModal').style.display = 'block';
+}
+
+function closeFieldDictModal() {
+  document.getElementById('fieldDictModal').style.display = 'none';
+}
+
+async function saveFieldDict() {
+  const system = document.getElementById('fdSystem').value;
+  const database = document.getElementById('fdDatabase').value;
+  const table = document.getElementById('fdTable').value;
+  const column = document.getElementById('fdColumn').value;
+  const synonymsRaw = document.getElementById('fdSynonyms').value;
+  const description = document.getElementById('fdDescription').value;
+  if (!system || !database || !table || !column) { alert('请完整选择系统、库、表、属性'); return; }
+  let synonyms = [];
+  try { synonyms = JSON.parse(synonymsRaw); } catch(e) { alert('同义词必须是 JSON 数组'); return; }
+  const payload = { library_name: system, table_name: table, column_name: column, synonyms, description };
+  // Try create
+  let resp = await fetch('/semantic/fields', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) }).catch(()=>null);
+  if (resp && resp.status === 201) { alert('字段字典已新增'); closeFieldDictModal(); return; }
+  // If exists, find id and update
+  const listResp = await fetch(`/semantic/fields?search=${encodeURIComponent(column)}`);
+  const listData = await listResp.json();
+  const existing = (listData.items || []).find(i => i.table_name===table && i.column_name===column);
+  if (existing) {
+    const updResp = await fetch(`/semantic/fields/${existing.id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    if (updResp.ok) { alert('字段字典已更新'); closeFieldDictModal(); }
+    else { alert('更新失败'); }
+  } else { alert('保存失败，请检查网络或权限'); }
+}
+
+// ---------- 新增值映射字典 ----------
+async function openValueDictModal(entity=null, idx=null) {
+  // Ensure data sources are loaded before proceeding
+  if (availableSystems.length===0) {
+    await loadDataSources();
+  }
+
+  const sysSelect = document.getElementById('vdSystem');
+  const dbSelect = document.getElementById('vdDatabase');
+  const tblSelect = document.getElementById('vdTable');
+  const colSelect = document.getElementById('vdColumn');
+  sysSelect.innerHTML = '';
+  dbSelect.innerHTML = '';
+  tblSelect.innerHTML = '';
+  colSelect.innerHTML = '';
+  availableSystems.forEach(s => { const opt=document.createElement('option'); opt.value=s; opt.textContent=s; sysSelect.appendChild(opt); });
+  sysSelect.onchange = async () => { const sys=sysSelect.value; const dbs=systemDatabases[sys]||[]; dbSelect.innerHTML=''; dbs.forEach(d=>{ const o=document.createElement('option'); o.value=d; o.textContent=d; dbSelect.appendChild(o); }); if (dbs.length) dbSelect.dispatchEvent(new Event('change')); };
+  dbSelect.onchange = async () => { const sys=sysSelect.value; const db=dbSelect.value; const dsId=dsIdMap[`${sys}|${db}`]; if (!dsId) { alert('未找到对应的数据源'); return; } await loadSchemaForDatasource(dsId); tblSelect.innerHTML=''; Object.keys(databaseTables).forEach(t=>{ const o=document.createElement('option'); o.value=t; o.textContent=t; tblSelect.appendChild(o); }); if (Object.keys(databaseTables).length) tblSelect.dispatchEvent(new Event('change')); };
+  tblSelect.onchange = () => { const t=tblSelect.value; const cols=databaseTables[t]||[]; colSelect.innerHTML=''; cols.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; colSelect.appendChild(o); }); };
+  if (availableSystems.length) sysSelect.dispatchEvent(new Event('change'));
+  if (entity && typeof idx === 'number') {
+  const p = entityProps[entity][idx];
+  if (p && p.origField) {
+    const parts = p.origField.split('|');
+    if (parts.length===4) {
+      const [sys, db, tbl, col] = parts;
+      sysSelect.value = sys;
+      sysSelect.disabled = true;
+      await sysSelect.onchange?.();
+      dbSelect.value = db;
+      dbSelect.disabled = true;
+      await dbSelect.onchange?.();
+      tblSelect.value = tbl;
+      tblSelect.disabled = true;
+      await tblSelect.onchange?.();
+colSelect.value = col;
+       colSelect.disabled = true;
+       // 检查值映射字典是否已存在，若存在则回显展示值、实际值和同义词
+       try {
+         const resp = await fetch(`/semantic/values?search=${encodeURIComponent(col)}`);
+         const data = await resp.json();
+         const existing = (data.items||[]).find(i => i.library_name===sys && i.table_name===tbl && i.column_name===col);
+         if (existing) {
+           document.getElementById('vdDisplay').value   = existing.display_value||'';
+           document.getElementById('vdActual').value    = existing.actual_value||'';
+           document.getElementById('vdSynonyms').value  = JSON.stringify(existing.synonyms||[]);
+         }
+       } catch(e){ /* ignore */ }
+     }
+   }
+ }
+ document.getElementById('valueDictModal').style.display = 'block';
+}
+
+function closeValueDictModal() { document.getElementById('valueDictModal').style.display = 'none'; }
+
+async function saveValueDict() {
+  const system = document.getElementById('vdSystem').value;
+  const database = document.getElementById('vdDatabase').value;
+  const table = document.getElementById('vdTable').value;
+  const column = document.getElementById('vdColumn').value;
+  const display = document.getElementById('vdDisplay').value;
+  const actual = document.getElementById('vdActual').value;
+  const synonymsRaw = document.getElementById('vdSynonyms').value;
+  if (!system || !database || !table || !column) { alert('请完整选择系统、库、表、属性'); return; }
+  let synonyms = [];
+  try { synonyms = JSON.parse(synonymsRaw); } catch(e) { alert('同义词必须是 JSON 数组'); return; }
+  const payload = { library_name: system, table_name: table, column_name: column, display_value: display, actual_value: actual, synonyms };
+  let resp = await fetch('/semantic/values', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).catch(()=>null);
+  if (resp && resp.status === 201) { alert('值映射已新增'); closeValueDictModal(); return; }
+  const listResp = await fetch(`/semantic/values?search=${encodeURIComponent(column)}`);
+  const listData = await listResp.json();
+  const existing = (listData.items || []).find(i => i.table_name===table && i.column_name===column && i.actual_value===actual);
+  if (existing) {
+    const updResp = await fetch(`/semantic/values/${existing.id}`, { method: 'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    if (updResp.ok) { alert('值映射已更新'); closeValueDictModal(); } else { alert('更新失败'); }
+  } else { alert('保存失败，请检查网络或权限'); }
+}
+
+
 function confirmFieldMap() {
   const system = document.getElementById('fieldSystem').value;
   const database = document.getElementById('fieldDatabase').value;
@@ -543,7 +768,7 @@ function renderEntityList() {
                         <option value="int" ${p.type==='int'?'selected':''}>int</option>
                      </select></td>
                   <td style="text-align:center;"><input type="checkbox" ${p.visible?'checked':''} onchange="updateProp('${name}', ${idx}, 'visible', this.checked)"/></td>
-                  <td><button onclick="removeProperty('${name}', ${idx})">🗑</button></td>
+                  <td><button onclick="removeProperty('${name}', ${idx})">🗑</button> <button onclick="openFieldDictModal('${name}', ${idx})" style="margin-left:4px;">📖</button> <button onclick="openValueDictModal('${name}', ${idx})" style="margin-left:4px;">📚</button></td>
                 </tr>`;
       });
       html += `</table>`;
